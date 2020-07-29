@@ -8,6 +8,7 @@ import (
 
 	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/bootstrap"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 )
 
@@ -24,13 +25,20 @@ func main() {
 
 	// TODO: where do IPFS-internal temporary files get created/saved?
 	node, err := core.NewNode(context.TODO(), &core.BuildCfg{
-		Online: true,
+		Online: true, // TODO: should we disable Online and drop Bootstrap call?
 		// NilRepo: true,  // ?
 	})
 	if err != nil {
 		die(err)
 	}
 	defer node.Close()
+
+	// FIXME: do we need this?
+	// WIP: trying to resolve NAT issues
+	err = node.Bootstrap(bootstrap.DefaultBootstrapConfig)
+	if err != nil {
+		die(err)
+	}
 	// TODO: node.Bootstrap() ? // https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core?tab=doc#IpfsNode.Bootstrap
 
 	api, err := coreapi.NewCoreAPI(node)
@@ -46,6 +54,9 @@ func main() {
 		die(err)
 	}
 	fmt.Println(path)
+
+	os.Stderr.WriteString("Press enter to continue: ")
+	os.Stdin.Read([]byte("tmp"))
 
 	r, err := api.Object().Data(context.TODO(), path)
 	if err != nil {
