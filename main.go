@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -18,8 +19,16 @@ func main() {
 	defer fh.Close()
 
 	// Upload the file to IPFS
+	// TODO: where do IPFS-internal temporary files get created/saved?
+	node, err := core.NewNode(context.TODO(), &core.BuildCfg{
+		Online: true,
+		// NilRepo: true,  // ?
+	})
+	if err != nil {
+		die(err)
+	}
+	defer node.Close()
 	_ = coreapi.NewCoreAPI // https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core/coreapi?tab=doc#NewCoreAPI
-	_ = core.NewNode       // https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core?tab=doc#NewNode
 	// https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core/node?tab=doc#BuildCfg
 }
 
