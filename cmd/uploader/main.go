@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 
 	files "github.com/ipfs/go-ipfs-files"
@@ -45,6 +46,13 @@ func main() {
 		die(err)
 	}
 	fmt.Println(path)
+
+	r, err := api.Object().Data(context.TODO(), path)
+	if err != nil {
+		die(err)
+	}
+	io.Copy(os.Stdout, r)
+
 }
 
 func die(msg ...interface{}) {
