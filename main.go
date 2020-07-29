@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 )
@@ -18,7 +19,8 @@ func main() {
 	}
 	defer fh.Close()
 
-	// Upload the file to IPFS
+	// Upload the file to IPFS...
+
 	// TODO: where do IPFS-internal temporary files get created/saved?
 	node, err := core.NewNode(context.TODO(), &core.BuildCfg{
 		Online: true,
@@ -28,8 +30,21 @@ func main() {
 		die(err)
 	}
 	defer node.Close()
-	_ = coreapi.NewCoreAPI // https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core/coreapi?tab=doc#NewCoreAPI
-	// https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core/node?tab=doc#BuildCfg
+	// TODO: node.Bootstrap() ? // https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core?tab=doc#IpfsNode.Bootstrap
+
+	api, err := coreapi.NewCoreAPI(node)
+	if err != nil {
+		die(err)
+	}
+	stat, err := fh.Stat()
+	if err != nil {
+		die(err)
+	}
+	path, err := api.Unixfs().Add(context.TODO(), files.NewReaderStatFile(fh, stat))
+	if err != nil {
+		die(err)
+	}
+	fmt.Println(path)
 }
 
 func die(msg ...interface{}) {
