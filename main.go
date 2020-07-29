@@ -9,6 +9,7 @@ import (
 )
 
 func main() {
+	// Open the file that we want to add to IPFS
 	fn := os.Args[1]
 	fh, err := os.Open(fn)
 	if err != nil {
@@ -16,6 +17,7 @@ func main() {
 	}
 	defer fh.Close()
 
+	// Upload the file to IPFS
 	_ = coreapi.NewCoreAPI // https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core/coreapi?tab=doc#NewCoreAPI
 	_ = core.NewNode       // https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core?tab=doc#NewNode
 	// https://pkg.go.dev/github.com/ipfs/go-ipfs@v0.6.0/core/node?tab=doc#BuildCfg
