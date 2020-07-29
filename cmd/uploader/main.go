@@ -6,15 +6,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 
+	"github.com/ipfs/go-datastore"
 	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/repo"
-	"github.com/ipfs/go-ipfs/repo/fsrepo"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
@@ -30,20 +29,15 @@ func main() {
 
 	// Upload the file to IPFS...
 
-	// Create filesystem-based temporary IPFS workdir
-	// TODO[LATER]: instead, try to use go-ipfs/repo.Mock{} with in-memory datastore, as is created by default by BuildCfg
-	repoPath, err := ioutil.TempDir("", "catation")
+	// We have to create a repo explicitly to be able to tweak config options
+	repo, err := defaultRepo(datastore.NewMapDatastore())
 	if err != nil {
 		die(err)
 	}
-	err := fsrepo.Init(repoPath, &config.Config{})
-	if err != nil {
-		die(err)
-	}
-	repo, err := fsrepo.Open(repoPath)
-	if err != nil {
-		die(err)
-	}
+	// Source: https://github.com/ipfs/go-ipfs/blob/master/docs/experimental-features.md#autorelay
+	// via: https://discuss.ipfs.io/t/how-to-connect-to-a-node-behind-nat/5270
+	repo.C.Swarm.EnableRelayHop = false
+	repo.C.Swarm.EnableAutoRelay = true
 
 	// TODO: where do IPFS-internal temporary files get created/saved?
 	node, err := core.NewNode(context.TODO(), &core.BuildCfg{
