@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"sync"
+	"sync/atomic"
 
 	files "github.com/ipfs/go-ipfs-files"
 	ipfspath "github.com/ipfs/interface-go-ipfs-core/path"
@@ -48,10 +49,11 @@ func main() {
 
 	// Upload the files to IPFS...
 	var (
-		images = os.Args[1:]
-		hashes = make([]string, len(images))
-		wgAdd  sync.WaitGroup
-		wgPin  sync.WaitGroup
+		images   = os.Args[1:]
+		hashes   = make([]string, len(images))
+		wgAdd    sync.WaitGroup
+		wgPin    sync.WaitGroup
+		progress int32
 	)
 	for i, fn := range images {
 		wgAdd.Add(1)
@@ -75,6 +77,9 @@ func main() {
 			if err != nil {
 				die(err)
 			}
+			log.Printf("pinned %d/%d: %s",
+				atomic.AddInt32(&progress, 1), len(images),
+				fh.Name())
 			wgPin.Done()
 		}(i, fn)
 	}
