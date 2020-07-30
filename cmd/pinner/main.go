@@ -1,76 +1,45 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
+	"log"
 	"os"
-	"time"
-)
 
-const (
-	pinataAPIKeyHeader       = "pinata_api_key"
-	pinataSecretAPIKeyHeader = "pinata_secret_api_key"
-
-	pinByHashEndpoint = "https://api.pinata.cloud/pinning/pinByHash"
-)
-
-type (
-	pinByHashPayload struct {
-		Hash string `json:"hashToPin"`
-	}
-
-	pinByHashResponse struct {
-		ID       string `json:"id"`
-		IPFSHash string `json:"ipfsHash"`
-		Status   string `json:"status"`
-		Name     string `json:"name"`
-	}
+	"github.com/wpengine/hackathon-catation/cmd/pinner/pinata"
 )
 
 func main() {
-	// generate payload from input
-	var (
-		hash    = os.Args[1]
-		payload = pinByHashPayload{Hash: hash}
-	)
-
-	jsonPayload, err := json.Marshal(&payload)
-	if err != nil {
-		die(err)
+	api := pinata.API{
+		Key:    os.Getenv("PINATA_API_KEY"),
+		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
 	}
 
-	req, err := http.NewRequest(http.MethodPost, pinByHashEndpoint, bytes.NewBuffer(jsonPayload))
+	resp, err := api.Pin(os.Args[1])
 	if err != nil {
-		die(err)
-	}
-	req.Header.Add("Content-Type", "application/json")
-	req.Header.Add(pinataAPIKeyHeader, os.Getenv("PINATA_API_KEY"))
-	req.Header.Add(pinataSecretAPIKeyHeader, os.Getenv("PINATA_SECRET_API_KEY"))
-
-	// make request
-	c := &http.Client{Timeout: 10 * time.Second}
-
-	resp, err := c.Do(req)
-	if err != nil {
-		die(err)
-	}
-	defer resp.Body.Close()
-
-	// parse response
-	var r pinByHashResponse
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
 		die(err)
 	}
 
 	// format output
-	s, err := json.MarshalIndent(r, "", "\t")
+	s, err := json.MarshalIndent(resp, "", "\t")
 	if err != nil {
 		die(err)
 	}
 
 	fmt.Println(string(s))
+
+	// Wait until verified successful pin
+	for {
+		fmt.Fprintf(os.Stderr, ".")
+		done, err := api.IsPinned(os.Args[1])
+		if err != nil {
+			panic(err)
+		}
+		if done {
+			log.Println("pinned!")
+			break
+		}
+	}
 }
 
 func die(msg ...interface{}) {
