@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/ipfs/go-datastore"
+	"github.com/ipfs/go-datastore/sync"
 	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
@@ -26,7 +27,7 @@ type Node struct {
 
 func Start() (*Node, error) {
 	// We have to create a repo explicitly to be able to tweak config options
-	repo, err := defaultRepo(datastore.NewMapDatastore())
+	repo, err := defaultRepo(sync.MutexWrap(datastore.NewMapDatastore()))
 	if err != nil {
 		return nil, fmt.Errorf("starting ipfs: repo initialization: %w", err)
 	}
