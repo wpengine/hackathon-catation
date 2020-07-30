@@ -8,6 +8,7 @@ import (
 
 	files "github.com/ipfs/go-ipfs-files"
 	ipfspath "github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/wpengine/hackathon-catation/cmd/builder/build"
 	"github.com/wpengine/hackathon-catation/cmd/pinner/pinata"
 	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
 )
@@ -41,7 +42,10 @@ func main() {
 		die(err)
 	}
 
-	indexHTML := []byte(`<html><head><title>Hello!</title></head><body>Hello cat world!</body></html>`)
+	indexHTML, err := build.IndexHTML(pathImage.Root().String())
+	if err != nil {
+		die(err)
+	}
 	pathIndex, err := AddIndexHTML(context.TODO(), node, indexHTML)
 	if err != nil {
 		die(err)
