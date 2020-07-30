@@ -36,6 +36,9 @@ func main() {
 		Key:    os.Getenv("PINATA_API_KEY"),
 		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
 	}
+	if pinner.Key == "" || pinner.Secret == "" {
+		die("please set pinata API key env variables PINATA_API_KEY and PINATA_SECRET_API_KEY to proper values (see http://pinata.cloud)")
+	}
 
 	pathImage, err := AddFile(context.TODO(), node, fh)
 	if err != nil {
