@@ -13,7 +13,7 @@ const html = `
     </head>
     <body>
         <h1>Images</h1>
-        {{range .}}<img src="/ipfs/{{.}}" />
+        {{range .}}<img src="/ipfs/{{.}}" style="max-width:100%; max-height:100vh; margin:auto" />
         {{end}}
     </body>
 </html>

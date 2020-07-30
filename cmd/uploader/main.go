@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	files "github.com/ipfs/go-ipfs-files"
 	ipfspath "github.com/ipfs/interface-go-ipfs-core/path"
@@ -18,13 +19,10 @@ import (
 func main() {
 	// TODO: check if this can help cleanup something: https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/README.md
 
-	// Open the file that we want to add to IPFS
-	fn := os.Args[1]
-	fh, err := os.Open(fn)
-	if err != nil {
-		die(err)
+	if len(os.Args) <= 1 || os.Args[1] == "--help" {
+		fmt.Printf("Usage: %s IMAGE_PATH...\n", os.Args[0])
+		os.Exit(2)
 	}
-	defer fh.Close()
 
 	// Verify that required API keys are configured
 	pinner := pinata.API{
@@ -41,20 +39,49 @@ func main() {
 		die("please set bitly API key env variable BITLY_API_KEY to proper value (see http://bitly.com)")
 	}
 
-	// Upload the file to IPFS...
-
+	// Initialize IPFS
 	node, err := ipfs.Start()
 	if err != nil {
 		panic(err)
 	}
 	defer node.Close()
 
-	pathImage, err := AddFile(context.TODO(), node, fh)
-	if err != nil {
-		die(err)
+	// Upload the files to IPFS...
+	var (
+		images = os.Args[1:]
+		hashes = make([]string, len(images))
+		wgAdd  sync.WaitGroup
+		wgPin  sync.WaitGroup
+	)
+	for i, fn := range images {
+		wgAdd.Add(1)
+		wgPin.Add(1)
+		go func(i int, fn string) {
+			// Open the file that we want to add to IPFS
+			fh, err := os.Open(fn)
+			if err != nil {
+				die(err)
+			}
+			defer fh.Close()
+
+			ipfsPath, err := AddFile(context.TODO(), node, fh)
+			if err != nil {
+				die(err)
+			}
+			hashes[i] = ipfsPath.Root().String()
+			wgAdd.Done()
+
+			err = Pin(context.TODO(), node, &pinner, ipfsPath)
+			if err != nil {
+				die(err)
+			}
+			wgPin.Done()
+		}(i, fn)
 	}
 
-	indexHTML, err := build.IndexHTML(pathImage.Root().String())
+	wgAdd.Wait()
+
+	indexHTML, err := build.IndexHTML(hashes...)
 	if err != nil {
 		die(err)
 	}
@@ -63,13 +90,6 @@ func main() {
 		die(err)
 	}
 	log.Println("index.html -->", pathIndex)
-
-	log.Printf("Pinning %s containing %q", pathImage, fh.Name())
-	err = Pin(context.TODO(), node, &pinner, pathImage)
-	if err != nil {
-		die(err)
-	}
-	log.Printf("UPLOAD SUCCESSFUL! ---> %s", pathImage)
 
 	log.Printf("Pinning %s containing %q", pathIndex, "index.html")
 	err = Pin(context.TODO(), node, &pinner, pathIndex)
@@ -84,6 +104,9 @@ func main() {
 	if err != nil {
 		die(err)
 	}
+
+	log.Println("Waiting for remaining images...")
+	wgPin.Wait()
 
 	fmt.Printf(`
 
