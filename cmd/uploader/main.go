@@ -29,21 +29,15 @@ func main() {
 	}
 	defer node.Close()
 
-	stat, err := fh.Stat()
-	if err != nil {
-		die(err)
+	pinner := pinata.API{
+		Key:    os.Getenv("PINATA_API_KEY"),
+		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
 	}
-	path, err := node.AddAndPin(context.TODO(), files.NewReaderStatFile(fh, stat))
-	if err != nil {
-		die(err)
-	}
-	fmt.Println(path)
 
-	// try to make sure the file is pinned and visible
-	log.Println("providing...")
-	err = node.Provide(context.TODO(), path)
+	path, err := UploadFile(context.TODO(), node, &pinner, fh)
+	fmt.Println(path)
 	if err != nil {
-		panic(err)
+		die(err)
 	}
 }
 
