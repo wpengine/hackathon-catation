@@ -63,6 +63,14 @@ func main() {
 	}
 	fmt.Println(path)
 
+	providersChan, err := api.Dht().FindProviders(context.TODO(), path)
+	if err != nil {
+		die(err)
+	}
+	for p := range providersChan {
+		fmt.Println(p)
+	}
+
 	os.Stderr.WriteString("Press enter to continue: ")
 	os.Stdin.Read([]byte("tmp"))
 
