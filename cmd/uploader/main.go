@@ -39,6 +39,7 @@ func main() {
 	if err != nil {
 		die(err)
 	}
+	log.Printf("UPLOAD SUCCESSFUL! ---> %s", path)
 }
 
 func die(msg ...interface{}) {
@@ -64,22 +65,24 @@ func UploadFile(ctx context.Context, node *ipfs.Node, pinner *pinata.API, f *os.
 	// Provide in background, until upload succeeds
 	go func() {
 		for {
-			// context timeout?
-			select {
-			case <-subctx.Done():
+			if subctx.Err() != nil {
+				// cancelled, quit silently
 				return
-			default:
 			}
 			// keep providing the path...
 			err := node.Provide(subctx, path)
+			if subctx.Err() != nil {
+				// cancelled, quit silently
+				return
+			}
 			if err != nil {
-				log.Printf("error uploading file %q to ipfs: providing: %w", f.Name(), err)
+				log.Printf("error uploading file %q to ipfs: providing: %v", f.Name(), err)
 			}
 		}
 	}()
 
 	hash := path.Root() // FIXME: is this correct?
-	log.Printf("(uploading %s)", hash)
+	log.Printf("Pinning %s (%s) containing %q", path, hash, f.Name())
 
 	_, err = pinner.Pin(hash.String())
 	if err != nil {
@@ -97,8 +100,7 @@ func UploadFile(ctx context.Context, node *ipfs.Node, pinner *pinata.API, f *os.
 		pinned, err := pinner.IsPinned(hash.String())
 		if err != nil {
 			// FIXME: sometimes getting weird timeouts from pinata - rate limiting kicking in? so can't just return the error
-			log.Printf("(trying to upload %q as %s: observed error: %s)",
-				f.Name(), hash, err)
+			log.Printf("(retrying %q after error: %s)", f.Name(), err)
 		}
 		if pinned {
 			return path, nil
