@@ -12,6 +12,7 @@ import (
 	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
 	"github.com/ipfs/go-ipfs/core"
+	"github.com/ipfs/go-ipfs/core/bootstrap"
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/repo"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
@@ -42,12 +43,20 @@ func main() {
 	// TODO: where do IPFS-internal temporary files get created/saved?
 	node, err := core.NewNode(context.TODO(), &core.BuildCfg{
 		// NilRepo: true,  // ?
-		Repo: repo,
+		Repo:   repo,
+		Online: true,
 	})
 	if err != nil {
 		die(err)
 	}
 	defer node.Close()
+
+	// FIXME: do we need this?
+	// WIP: trying to resolve NAT issues
+	err = node.Bootstrap(bootstrap.DefaultBootstrapConfig)
+	if err != nil {
+		die(err)
+	}
 
 	api, err := coreapi.NewCoreAPI(node)
 	if err != nil {
