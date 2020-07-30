@@ -9,26 +9,6 @@ import (
 	"github.com/wpengine/hackathon-catation/cmd/pinner/pinata"
 )
 
-const (
-	pinataAPIKeyHeader       = "pinata_api_key"
-	pinataSecretAPIKeyHeader = "pinata_secret_api_key"
-
-	pinByHashEndpoint = "https://api.pinata.cloud/pinning/pinByHash"
-)
-
-type (
-	pinByHashPayload struct {
-		Hash string `json:"hashToPin"`
-	}
-
-	pinByHashResponse struct {
-		ID       string `json:"id"`
-		IPFSHash string `json:"ipfsHash"`
-		Status   string `json:"status"`
-		Name     string `json:"name"`
-	}
-)
-
 func main() {
 	api := pinata.API{
 		Key:    os.Getenv("PINATA_API_KEY"),
