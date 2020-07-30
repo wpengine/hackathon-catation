@@ -7,11 +7,7 @@ import (
 )
 
 func main() {
-	hashes := os.Args
-	imgs := make([]template.HTML, len(hashes)-1)
-	for i := 0; i < len(hashes)-1; i++ {
-		imgs[i] = template.HTML(fmt.Sprintf(`<img src="/ipfs/%s">`, hashes[i+1]))
-	}
+	hashes := os.Args[1:]
 	t, err := template.ParseFiles("template.html")
 	if err != nil {
 		die(err)
@@ -22,7 +18,7 @@ func main() {
 		die(err)
 	}
 
-	err = t.Execute(f, imgs)
+	err = t.Execute(f, hashes)
 
 	f.Close()
 }
