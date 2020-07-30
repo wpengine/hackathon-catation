@@ -40,6 +40,7 @@ func (api *API) Pin(hash string) (*PinResponse, error) {
 	req.Header.Add("pinata_secret_api_key", api.Secret)
 
 	// execute the request
+	// TODO: use context.Context instead of raw timeout ?
 	c := &http.Client{Timeout: 10 * time.Second}
 	resp, err := c.Do(req)
 	if err != nil {
