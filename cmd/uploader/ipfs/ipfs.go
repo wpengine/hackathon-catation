@@ -14,7 +14,7 @@ import (
 	"github.com/ipfs/go-ipfs/core/coreapi"
 	"github.com/ipfs/go-ipfs/repo"
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
-	"github.com/ipfs/interface-go-ipfs-core/path"
+	ipfspath "github.com/ipfs/interface-go-ipfs-core/path"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
@@ -89,7 +89,7 @@ func (n *Node) Close() error {
 	return n.node.Close()
 }
 
-func (n *Node) AddAndPin(ctx context.Context, file files.Node) (path.Resolved, error) {
+func (n *Node) AddAndPin(ctx context.Context, file files.Node) (ipfspath.Resolved, error) {
 	path, err := n.API.Unixfs().Add(ctx, file)
 	if err != nil {
 		return path, fmt.Errorf("adding to ipfs: %w", err)
@@ -99,4 +99,12 @@ func (n *Node) AddAndPin(ctx context.Context, file files.Node) (path.Resolved, e
 		return path, fmt.Errorf("pinning in ipfs: %w", err)
 	}
 	return path, nil
+}
+
+func (n *Node) Provide(ctx context.Context, path ipfspath.Path) error {
+	err := n.API.Dht().Provide(ctx, path)
+	if err != nil {
+		return fmt.Errorf("providing %s to ipfs: %w", path, err)
+	}
+	return nil
 }
