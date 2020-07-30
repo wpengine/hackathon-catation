@@ -8,8 +8,10 @@ import (
 
 	files "github.com/ipfs/go-ipfs-files"
 	ipfspath "github.com/ipfs/interface-go-ipfs-core/path"
+
 	"github.com/wpengine/hackathon-catation/cmd/builder/build"
 	"github.com/wpengine/hackathon-catation/cmd/pinner/pinata"
+	"github.com/wpengine/hackathon-catation/cmd/shortener/bitly"
 	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
 )
 
@@ -24,14 +26,7 @@ func main() {
 	}
 	defer fh.Close()
 
-	// Upload the file to IPFS...
-
-	node, err := ipfs.Start()
-	if err != nil {
-		panic(err)
-	}
-	defer node.Close()
-
+	// Verify that required API keys are configured
 	pinner := pinata.API{
 		Key:    os.Getenv("PINATA_API_KEY"),
 		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
@@ -39,6 +34,20 @@ func main() {
 	if pinner.Key == "" || pinner.Secret == "" {
 		die("please set pinata API key env variables PINATA_API_KEY and PINATA_SECRET_API_KEY to proper values (see http://pinata.cloud)")
 	}
+	shortener := bitly.API{
+		Key: os.Getenv("BITLY_API_KEY"),
+	}
+	if shortener.Key == "" {
+		die("please set bitly API key env variable BITLY_API_KEY to proper value (see http://bitly.com)")
+	}
+
+	// Upload the file to IPFS...
+
+	node, err := ipfs.Start()
+	if err != nil {
+		panic(err)
+	}
+	defer node.Close()
 
 	pathImage, err := AddFile(context.TODO(), node, fh)
 	if err != nil {
@@ -68,6 +77,20 @@ func main() {
 		die(err)
 	}
 	log.Printf("UPLOAD SUCCESSFUL! ---> %s", pathIndex)
+
+	// URL shortener
+	hash := pathIndex.Root().String()
+	link, err := shortener.Shorten("http://ipfs.io/ipfs/" + hash)
+	if err != nil {
+		die(err)
+	}
+
+	fmt.Printf(`
+
+>>>>>
+>>>>>     %s
+>>>>>
+`, link)
 }
 
 func die(msg ...interface{}) {
