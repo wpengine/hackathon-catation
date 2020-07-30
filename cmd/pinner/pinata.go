@@ -52,7 +52,7 @@ func (api *API) Pin(hash string) (*PinResponse, error) {
 	// parse response
 	var r PinResponse
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return &r, fmt.Errorf("pinata: adding hash %q: %w", hash, err)
+		return &r, fmt.Errorf("pinata: adding hash %q: decoding response: %w", hash, err)
 	}
 	return &r, nil
 }
@@ -62,7 +62,7 @@ func (api *API) IsPinned(hash string) (bool, error) {
 
 	req, err := http.NewRequest(
 		http.MethodGet,
-		"https://api.pinata.cloud/pinning/pinByHash"+
+		"https://api.pinata.cloud/data/pinList"+
 			"?status=pinned",
 		nil)
 	if err != nil {
@@ -89,7 +89,7 @@ func (api *API) IsPinned(hash string) (bool, error) {
 		}
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return false, fmt.Errorf("pinata: querying hash %q: %w", hash, err)
+		return false, fmt.Errorf("pinata: querying hash %q: decoding response: %w", hash, err)
 	}
 
 	for _, row := range r.Rows {
