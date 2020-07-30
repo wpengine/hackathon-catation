@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	"github.com/wpengine/hackathon-catation/cmd/pinner/pinata"
 )
 
 const (
@@ -28,7 +30,7 @@ type (
 )
 
 func main() {
-	api := API{
+	api := pinata.API{
 		Key:    os.Getenv("PINATA_API_KEY"),
 		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
 	}

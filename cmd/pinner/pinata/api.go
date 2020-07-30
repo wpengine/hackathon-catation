@@ -1,4 +1,4 @@
-package main
+package pinata
 
 import (
 	"bytes"
