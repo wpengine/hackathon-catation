@@ -34,8 +34,13 @@ func main() {
 		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
 	}
 
-	path, err := UploadFile(context.TODO(), node, &pinner, fh)
-	fmt.Println(path)
+	path, err := AddFile(context.TODO(), node, fh)
+	if err != nil {
+		die(err)
+	}
+	log.Printf("Pinning %s containing %q", path, fh.Name())
+
+	err = Pin(context.TODO(), node, &pinner, path)
 	if err != nil {
 		die(err)
 	}
@@ -48,17 +53,21 @@ func die(msg ...interface{}) {
 }
 
 // TODO: use interface instead of concrete *ipfs.Node
-// TODO: use interface instead of concrete *pinata.API
-func UploadFile(ctx context.Context, node *ipfs.Node, pinner *pinata.API, f *os.File) (ipfspath.Resolved, error) {
+func AddFile(ctx context.Context, node *ipfs.Node, f *os.File) (ipfspath.Resolved, error) {
 	stat, err := f.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), err)
+		return nil, fmt.Errorf("adding file %q to ipfs: %w", f.Name(), err)
 	}
 	path, err := node.AddAndPin(ctx, files.NewReaderStatFile(f, stat))
 	if err != nil {
-		return path, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), err)
+		return path, fmt.Errorf("adding file %q to ipfs: %w", f.Name(), err)
 	}
+	return path, nil
+}
 
+// TODO: use interface instead of concrete *ipfs.Node
+// TODO: use interface instead of concrete *pinata.API
+func Pin(ctx context.Context, node *ipfs.Node, pinner *pinata.API, path ipfspath.Resolved) error {
 	subctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
@@ -76,34 +85,33 @@ func UploadFile(ctx context.Context, node *ipfs.Node, pinner *pinata.API, f *os.
 				return
 			}
 			if err != nil {
-				log.Printf("error uploading file %q to ipfs: providing: %v", f.Name(), err)
+				log.Printf("error uploading %s to ipfs: providing: %v", path, err)
 			}
 		}
 	}()
 
 	hash := path.Root() // FIXME: is this correct?
-	log.Printf("Pinning %s (%s) containing %q", path, hash, f.Name())
 
-	_, err = pinner.Pin(hash.String())
+	_, err := pinner.Pin(hash.String())
 	if err != nil {
-		return nil, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), err)
+		return fmt.Errorf("pinning %q: %w", path, err)
 	}
 
 	for {
 		// context timeout?
 		select {
 		case <-ctx.Done():
-			return nil, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), ctx.Err())
+			return fmt.Errorf("pinning %q: %w", path, ctx.Err())
 		default:
 		}
 		// keep checking if the file got successfully pinned
 		pinned, err := pinner.IsPinned(hash.String())
 		if err != nil {
 			// FIXME: sometimes getting weird timeouts from pinata - rate limiting kicking in? so can't just return the error
-			log.Printf("(retrying %q after error: %s)", f.Name(), err)
+			log.Printf("(retrying after error: %s)", err)
 		}
 		if pinned {
-			return path, nil
+			return nil
 		}
 	}
 }
