@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"log"
 	"os"
 
 	"github.com/ipfs/go-datastore"
@@ -72,6 +73,19 @@ func main() {
 	}
 	fmt.Println(path)
 
+	// try to make sure the file is pinned and visible
+	log.Println("pinning...")
+	err = api.Pin().Add(context.TODO(), path)
+	if err != nil {
+		panic(err)
+	}
+	log.Println("providing...")
+	err = api.Dht().Provide(context.TODO(), path)
+	if err != nil {
+		panic(err)
+	}
+
+	log.Println("finding providers...")
 	providersChan, err := api.Dht().FindProviders(context.TODO(), path)
 	if err != nil {
 		die(err)
