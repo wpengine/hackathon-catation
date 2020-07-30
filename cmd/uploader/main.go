@@ -13,6 +13,8 @@ import (
 )
 
 func main() {
+	// TODO: check if this can help cleanup something: https://github.com/ipfs/go-ipfs/blob/master/docs/examples/go-ipfs-as-a-library/README.md
+
 	// Open the file that we want to add to IPFS
 	fn := os.Args[1]
 	fh, err := os.Open(fn)
@@ -34,17 +36,31 @@ func main() {
 		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
 	}
 
-	path, err := AddFile(context.TODO(), node, fh)
+	pathImage, err := AddFile(context.TODO(), node, fh)
 	if err != nil {
 		die(err)
 	}
-	log.Printf("Pinning %s containing %q", path, fh.Name())
 
-	err = Pin(context.TODO(), node, &pinner, path)
+	indexHTML := []byte(`<html><head><title>Hello!</title></head><body>Hello cat world!</body></html>`)
+	pathIndex, err := AddIndexHTML(context.TODO(), node, indexHTML)
 	if err != nil {
 		die(err)
 	}
-	log.Printf("UPLOAD SUCCESSFUL! ---> %s", path)
+	log.Println("index.html -->", pathIndex)
+
+	log.Printf("Pinning %s containing %q", pathImage, fh.Name())
+	err = Pin(context.TODO(), node, &pinner, pathImage)
+	if err != nil {
+		die(err)
+	}
+	log.Printf("UPLOAD SUCCESSFUL! ---> %s", pathImage)
+
+	log.Printf("Pinning %s containing %q", pathIndex, "index.html")
+	err = Pin(context.TODO(), node, &pinner, pathIndex)
+	if err != nil {
+		die(err)
+	}
+	log.Printf("UPLOAD SUCCESSFUL! ---> %s", pathIndex)
 }
 
 func die(msg ...interface{}) {
@@ -61,6 +77,17 @@ func AddFile(ctx context.Context, node *ipfs.Node, f *os.File) (ipfspath.Resolve
 	path, err := node.AddAndPin(ctx, files.NewReaderStatFile(f, stat))
 	if err != nil {
 		return path, fmt.Errorf("adding file %q to ipfs: %w", f.Name(), err)
+	}
+	return path, nil
+}
+
+// TODO: use interface instead of concrete *ipfs.Node
+func AddIndexHTML(ctx context.Context, node *ipfs.Node, contents []byte) (ipfspath.Resolved, error) {
+	path, err := node.AddAndPin(ctx, files.NewMapDirectory(map[string]files.Node{
+		"index.html": files.NewBytesFile(contents),
+	}))
+	if err != nil {
+		return path, fmt.Errorf("adding index.html (%d B) to ipfs: %w", len(contents), err)
 	}
 	return path, nil
 }
