@@ -2,22 +2,14 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"io"
 	"log"
 	"os"
 
-	"github.com/ipfs/go-datastore"
-	config "github.com/ipfs/go-ipfs-config"
 	files "github.com/ipfs/go-ipfs-files"
-	"github.com/ipfs/go-ipfs/core"
-	"github.com/ipfs/go-ipfs/core/bootstrap"
-	"github.com/ipfs/go-ipfs/core/coreapi"
-	"github.com/ipfs/go-ipfs/repo"
-	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
-	peer "github.com/libp2p/go-libp2p-peer"
+	ipfspath "github.com/ipfs/interface-go-ipfs-core/path"
+	"github.com/wpengine/hackathon-catation/cmd/pinner/pinata"
+	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
 )
 
 func main() {
@@ -31,109 +23,87 @@ func main() {
 
 	// Upload the file to IPFS...
 
-	// We have to create a repo explicitly to be able to tweak config options
-	repo, err := defaultRepo(datastore.NewMapDatastore())
+	node, err := ipfs.Start()
 	if err != nil {
-		die(err)
-	}
-	// Source: https://github.com/ipfs/go-ipfs/blob/master/docs/experimental-features.md#autorelay
-	// via: https://discuss.ipfs.io/t/how-to-connect-to-a-node-behind-nat/5270
-	repo.C.Swarm.EnableRelayHop = false
-	repo.C.Swarm.EnableAutoRelay = true
-
-	// TODO: where do IPFS-internal temporary files get created/saved?
-	node, err := core.NewNode(context.TODO(), &core.BuildCfg{
-		// NilRepo: true,  // ?
-		Repo:   repo,
-		Online: true,
-	})
-	if err != nil {
-		die(err)
+		panic(err)
 	}
 	defer node.Close()
 
-	// FIXME: do we need this?
-	// WIP: trying to resolve NAT issues
-	err = node.Bootstrap(bootstrap.DefaultBootstrapConfig)
-	if err != nil {
-		die(err)
+	pinner := pinata.API{
+		Key:    os.Getenv("PINATA_API_KEY"),
+		Secret: os.Getenv("PINATA_SECRET_API_KEY"),
 	}
 
-	api, err := coreapi.NewCoreAPI(node)
-	if err != nil {
-		die(err)
-	}
-	stat, err := fh.Stat()
-	if err != nil {
-		die(err)
-	}
-	path, err := api.Unixfs().Add(context.TODO(), files.NewReaderStatFile(fh, stat))
-	if err != nil {
-		die(err)
-	}
+	path, err := UploadFile(context.TODO(), node, &pinner, fh)
 	fmt.Println(path)
-
-	// try to make sure the file is pinned and visible
-	log.Println("pinning...")
-	err = api.Pin().Add(context.TODO(), path)
-	if err != nil {
-		panic(err)
-	}
-	log.Println("providing...")
-	err = api.Dht().Provide(context.TODO(), path)
-	if err != nil {
-		panic(err)
-	}
-
-	log.Println("finding providers...")
-	providersChan, err := api.Dht().FindProviders(context.TODO(), path)
 	if err != nil {
 		die(err)
 	}
-	for p := range providersChan {
-		fmt.Println(p)
-	}
-
-	os.Stderr.WriteString("Press enter to continue: ")
-	os.Stdin.Read([]byte("tmp"))
-
-	r, err := api.Object().Data(context.TODO(), path)
-	if err != nil {
-		die(err)
-	}
-	io.Copy(os.Stdout, r)
-}
-
-// FIXME: copied from: https://github.com/ipfs/go-ipfs/blob/5b28704e505eb9a65c1ef8d2336da95af8e828c8/core/node/builder.go#L125-L151
-func defaultRepo(dstore repo.Datastore) (*repo.Mock, error) {
-	c := config.Config{}
-	priv, pub, err := p2pcrypto.GenerateKeyPairWithReader(p2pcrypto.RSA, 2048, rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-
-	pid, err := peer.IDFromPublicKey(pub)
-	if err != nil {
-		return nil, err
-	}
-
-	privkeyb, err := priv.Bytes()
-	if err != nil {
-		return nil, err
-	}
-
-	c.Bootstrap = config.DefaultBootstrapAddresses
-	c.Addresses.Swarm = []string{"/ip4/0.0.0.0/tcp/4001", "/ip4/0.0.0.0/udp/4001/quic"}
-	c.Identity.PeerID = pid.Pretty()
-	c.Identity.PrivKey = base64.StdEncoding.EncodeToString(privkeyb)
-
-	return &repo.Mock{
-		D: dstore,
-		C: c,
-	}, nil
+	log.Printf("UPLOAD SUCCESSFUL! ---> %s", path)
 }
 
 func die(msg ...interface{}) {
 	fmt.Fprintln(os.Stderr, "error:", fmt.Sprint(msg...))
 	os.Exit(1)
+}
+
+// TODO: use interface instead of concrete *ipfs.Node
+// TODO: use interface instead of concrete *pinata.API
+func UploadFile(ctx context.Context, node *ipfs.Node, pinner *pinata.API, f *os.File) (ipfspath.Resolved, error) {
+	stat, err := f.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), err)
+	}
+	path, err := node.AddAndPin(ctx, files.NewReaderStatFile(f, stat))
+	if err != nil {
+		return path, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), err)
+	}
+
+	subctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Provide in background, until upload succeeds
+	go func() {
+		for {
+			if subctx.Err() != nil {
+				// cancelled, quit silently
+				return
+			}
+			// keep providing the path...
+			err := node.Provide(subctx, path)
+			if subctx.Err() != nil {
+				// cancelled, quit silently
+				return
+			}
+			if err != nil {
+				log.Printf("error uploading file %q to ipfs: providing: %v", f.Name(), err)
+			}
+		}
+	}()
+
+	hash := path.Root() // FIXME: is this correct?
+	log.Printf("Pinning %s (%s) containing %q", path, hash, f.Name())
+
+	_, err = pinner.Pin(hash.String())
+	if err != nil {
+		return nil, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), err)
+	}
+
+	for {
+		// context timeout?
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("uploading file %q to ipfs: %w", f.Name(), ctx.Err())
+		default:
+		}
+		// keep checking if the file got successfully pinned
+		pinned, err := pinner.IsPinned(hash.String())
+		if err != nil {
+			// FIXME: sometimes getting weird timeouts from pinata - rate limiting kicking in? so can't just return the error
+			log.Printf("(retrying %q after error: %s)", f.Name(), err)
+		}
+		if pinned {
+			return path, nil
+		}
+	}
 }
