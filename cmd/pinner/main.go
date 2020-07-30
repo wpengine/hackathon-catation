@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -53,7 +54,7 @@ func main() {
 			panic(err)
 		}
 		if done {
-			fmt.Fprintln(os.Stderr, "pinned!")
+			log.Println("pinned!")
 			break
 		}
 	}
