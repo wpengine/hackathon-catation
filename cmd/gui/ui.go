@@ -21,7 +21,8 @@ import (
 var theme *material.Theme
 
 type UI struct {
-	imageList *layout.List
+	imageList       *layout.List
+	buttonClickable *widget.Clickable
 }
 
 func init() {
@@ -33,6 +34,7 @@ func newUI() *UI {
 		imageList: &layout.List{
 			Axis: layout.Vertical,
 		},
+		buttonClickable: &widget.Clickable{},
 	}
 }
 
@@ -59,7 +61,7 @@ func (u *UI) renderHeading(gtx layout.Context) layout.Dimensions {
 }
 
 func (u *UI) renderUploadButton(gtx layout.Context) layout.Dimensions {
-	return Render(gtx)
+	return material.Button(theme, u.buttonClickable, "Upload").Layout(gtx)
 }
 
 func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
