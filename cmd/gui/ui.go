@@ -69,7 +69,7 @@ func (u *UI) layout(gtx layout.Context) {
 }
 
 func (u *UI) renderHeading(gtx layout.Context) layout.Dimensions {
-	l := material.H1(theme, "Select Photos To Share")
+	l := material.H3(theme, "Select Photos To Share")
 	l.Color = color.RGBA{127, 0, 0, 255} // maroon
 	l.Alignment = text.Middle
 	return l.Layout(gtx)
