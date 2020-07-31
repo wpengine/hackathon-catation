@@ -47,7 +47,6 @@ func loop(a *App) error {
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
 			a.ui.layout(gtx)
-			Render(gtx)
 			e.Frame(gtx.Ops)
 		}
 	}

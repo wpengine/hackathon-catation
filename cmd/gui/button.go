@@ -17,11 +17,11 @@ type Button struct {
 }
 
 //Render ...
-func Render(gtx layout.Context) {
+func Render(gtx layout.Context) layout.Dimensions {
 	btn := Button{
 		selected: true,
 	}
-	btn.Layout(gtx)
+	return btn.Layout(gtx)
 }
 
 //Layout ...

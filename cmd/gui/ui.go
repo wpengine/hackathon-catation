@@ -42,6 +42,9 @@ func (u *UI) layout(gtx layout.Context) {
 			return u.renderHeading(gtx)
 		}),
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return u.renderUploadButton(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			gtx.Constraints.Min.X = gtx.Constraints.Max.X
 			return u.renderImages(gtx)
 		}),
@@ -53,6 +56,10 @@ func (u *UI) renderHeading(gtx layout.Context) layout.Dimensions {
 	l.Color = color.RGBA{127, 0, 0, 255} // maroon
 	l.Alignment = text.Middle
 	return l.Layout(gtx)
+}
+
+func (u *UI) renderUploadButton(gtx layout.Context) layout.Dimensions {
+	return Render(gtx)
 }
 
 func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
