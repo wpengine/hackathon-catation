@@ -20,45 +20,50 @@ import (
 
 var theme *material.Theme
 
+type UI struct {
+	imageList *layout.List
+}
+
 func init() {
 	theme = material.NewTheme(gofont.Collection())
 }
 
-func Layout(gtx layout.Context) {
-	// FIXME: probably shouldn't use a fixed list to do this
-	l := layout.List{Axis: layout.Vertical}
-	l.Layout(gtx, 2, func(gtx layout.Context, index int) layout.Dimensions {
-		switch index {
-		case 0:
-			return renderHeading(gtx)
-		case 1:
-			return renderImages(gtx)
-		}
-
-		return layout.Dimensions{}
-	})
+func newUI() *UI {
+	return &UI{
+		imageList: &layout.List{
+			Axis: layout.Vertical,
+		},
+	}
 }
 
-func renderHeading(gtx layout.Context) layout.Dimensions {
+func (u *UI) layout(gtx layout.Context) {
+	layout.Flex{Axis: layout.Vertical}.Layout(gtx,
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			return u.renderHeading(gtx)
+		}),
+		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+			gtx.Constraints.Min.X = gtx.Constraints.Max.X
+			return u.renderImages(gtx)
+		}),
+	)
+}
+
+func (u *UI) renderHeading(gtx layout.Context) layout.Dimensions {
 	l := material.H1(theme, "Select Photos To Share")
 	l.Color = color.RGBA{127, 0, 0, 255} // maroon
 	l.Alignment = text.Middle
 	return l.Layout(gtx)
 }
 
-func renderImages(gtx layout.Context) layout.Dimensions {
+func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
 	images, err := cwdImages()
 	if err != nil {
 		return layout.Dimensions{}
 	}
 
-	l := layout.List{Axis: layout.Vertical}
+	l := u.imageList
 	return l.Layout(gtx, len(images), func(gtx layout.Context, index int) layout.Dimensions {
-		return layout.Flex{}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return widget.Image{Src: paint.NewImageOp(images[index])}.Layout(gtx)
-			}),
-		)
+		return widget.Image{Src: paint.NewImageOp(images[index])}.Layout(gtx)
 	})
 }
 
