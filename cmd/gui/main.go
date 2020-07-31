@@ -17,47 +17,37 @@ import (
 	"gioui.org/widget"
 )
 
-type App struct {
-	w  *app.Window
-	ui *UI
-}
-
 func main() {
-	go func() {
-		a := &App{
-			w: app.NewWindow(
-				app.Title("Catation"),
-			),
-			ui: newUI(),
-		}
-
-		if err := loop(a); err != nil {
-			log.Fatal(err)
-		}
-		os.Exit(0)
-	}()
+	go loop()
 	app.Main()
 }
 
-func loop(a *App) error {
-	a.ui.imageInfos = getCWDImageInfos()
+func loop() {
+	window := app.NewWindow(
+		app.Title("Catation"),
+	)
+	ui := newUI()
+	ui.imageInfos = getCWDImageInfos()
 
 	var ops op.Ops
-	for e := range a.w.Events() {
+	for e := range window.Events() {
 		switch e := e.(type) {
 		case key.Event:
 			if e.Name == key.NameEscape {
 				os.Exit(0)
 			}
 		case system.DestroyEvent:
-			return e.Err
+			if e.Err != nil {
+				log.Fatal(e.Err)
+			}
+			os.Exit(0)
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
-			a.ui.layout(gtx)
+			ui.layout(gtx)
 			e.Frame(gtx.Ops)
 		}
 	}
-	return nil
+	os.Exit(0)
 }
 
 func getCWDImageInfos() []imageInfo {
