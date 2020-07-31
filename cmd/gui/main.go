@@ -1,10 +1,10 @@
 package main
 
 import (
-	"errors"
+	"fmt"
 	"image"
-	"image/jpeg"
-	"image/png"
+	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"os"
 	"path/filepath"
@@ -27,7 +27,7 @@ func loop() {
 		app.Title("Catation"),
 	)
 	ui := newUI()
-	ui.imageInfos = getCWDImageInfos()
+	ui.imageInfos = findImages(".")
 
 	var ops op.Ops
 	for e := range window.Events() {
@@ -50,85 +50,55 @@ func loop() {
 	os.Exit(0)
 }
 
-func getCWDImageInfos() []imageInfo {
-	images, err := cwdImages()
-	if err != nil {
-		return nil
-	}
-
+func findImages(basedir string) []imageInfo {
 	var imgInfos []imageInfo
-	for path, data := range images {
+
+	err := filepath.Walk(basedir, func(path string, info os.FileInfo, err error) error {
+		switch filepath.Ext(path) {
+		case ".jpg", ".jpeg", ".png":
+			// ok
+		default:
+			return nil
+		}
+
+		img, err := parseImage(path)
+		if err != nil {
+			log.Println("error", err)
+			return nil
+		}
+
 		imgInfos = append(imgInfos, imageInfo{
 			path:    path,
-			imgData: data,
+			imgData: img,
 			checkboxSelected: &widget.Bool{
 				Value: false,
 			},
 		})
-	}
+		return nil
+	})
 
+	if err != nil {
+		log.Println("error listing images:", err)
+	}
 	return imgInfos
-}
-
-func cwdImages() (map[string]image.Image, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	paths, err := listImagePaths(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	images := make(map[string]image.Image)
-	for _, path := range paths {
-		img, err := parseImage(path)
-		if err != nil {
-			log.Println("error parsing image", err)
-			continue
-		}
-		images[path] = img
-	}
-
-	return images, nil
 }
 
 func parseImage(path string) (image.Image, error) {
 	fh, err := os.Open(path)
 	if err != nil {
-		log.Printf("error opening image %s", path)
-		return nil, err
+		return nil, fmt.Errorf("parsing image: %w", err)
 	}
-
 	defer fh.Close()
 
-	_, imgType, err := image.Decode(fh)
+	img, typ, err := image.Decode(fh)
 	if err != nil {
-		log.Printf("invalid image format %s", path)
-		return nil, err
+		return nil, fmt.Errorf("parsing image %q: %w", path, err)
 	}
 
-	_, _ = fh.Seek(0, 0) // reset to beginning of file to avoid EOF
-
-	switch imgType {
-	case "png":
-		return png.Decode(fh)
-	case "jpeg":
-		return jpeg.Decode(fh)
+	switch typ {
+	case "png", "jpeg":
+		return img, nil
 	default:
-		return nil, errors.New("unsupported image type")
+		return nil, fmt.Errorf("parsing image %q: unsupported type %q", path, typ)
 	}
-}
-
-func listImagePaths(dir string) (paths []string, err error) {
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		switch filepath.Ext(path) {
-		case ".jpg", ".jpeg", ".png":
-			paths = append(paths, path)
-		}
-		return nil
-	})
-
-	return
 }
