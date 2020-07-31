@@ -1,14 +1,9 @@
 package main
 
 import (
-	"errors"
 	"image"
 	"image/color"
-	"image/jpeg"
-	"image/png"
-	"log"
-	"os"
-	"path/filepath"
+	"os/exec"
 
 	"gioui.org/font/gofont"
 	"gioui.org/layout"
@@ -16,13 +11,20 @@ import (
 	"gioui.org/text"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+	"github.com/wpengine/hackathon-catation/cmd/uploader/pinata"
 )
 
 var theme *material.Theme
 
 type UI struct {
-	imageList        *layout.List
-	buttonClickable  *widget.Clickable
+	imageList       *layout.List
+	imageInfos      []imageInfo
+	buttonClickable *widget.Clickable
+}
+
+type imageInfo struct {
+	path             string
+	imgData          image.Image
 	checkboxSelected *widget.Bool
 }
 
@@ -35,12 +37,23 @@ func newUI() *UI {
 		imageList: &layout.List{
 			Axis: layout.Vertical,
 		},
-		buttonClickable:  &widget.Clickable{},
-		checkboxSelected: &widget.Bool{},
+		buttonClickable: &widget.Clickable{},
 	}
 }
 
 func (u *UI) layout(gtx layout.Context) {
+	for range u.buttonClickable.Clicks() {
+		var paths []string
+		for _, imgInfo := range u.imageInfos {
+			if imgInfo.checkboxSelected.Value {
+				paths = append(paths, imgInfo.path)
+			}
+		}
+
+		link := pinata.Upload(paths)
+		_ = exec.Command("open", link).Start()
+	}
+
 	layout.Flex{Axis: layout.Vertical}.Layout(gtx,
 		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
 			return u.renderHeading(gtx)
@@ -67,83 +80,15 @@ func (u *UI) renderUploadButton(gtx layout.Context) layout.Dimensions {
 }
 
 func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
-	images, err := cwdImages()
-	if err != nil {
-		return layout.Dimensions{}
-	}
-
 	l := u.imageList
-	return l.Layout(gtx, len(images), func(gtx layout.Context, index int) layout.Dimensions {
+	return l.Layout(gtx, len(u.imageInfos), func(gtx layout.Context, index int) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return widget.Image{Src: paint.NewImageOp(images[index])}.Layout(gtx)
+				return widget.Image{Src: paint.NewImageOp(u.imageInfos[index].imgData)}.Layout(gtx)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return material.CheckBox(theme, u.checkboxSelected, "label").Layout(gtx)
+				return material.CheckBox(theme, u.imageInfos[index].checkboxSelected, u.imageInfos[index].path).Layout(gtx)
 			}),
 		)
 	})
-}
-
-func cwdImages() ([]image.Image, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return nil, err
-	}
-
-	paths, err := listImagePaths(dir)
-	if err != nil {
-		return nil, err
-	}
-
-	var images []image.Image
-	for _, path := range paths {
-		img, err := parseImage(path)
-		if err != nil {
-			log.Println("error parsing image", err)
-			continue
-		}
-		images = append(images, img)
-	}
-
-	return images, nil
-}
-
-func parseImage(path string) (image.Image, error) {
-	fh, err := os.Open(path)
-	if err != nil {
-		log.Printf("error opening image %s", path)
-		return nil, err
-	}
-
-	defer fh.Close()
-
-	_, imgType, err := image.Decode(fh)
-	if err != nil {
-		log.Printf("invalid image format %s", path)
-		return nil, err
-	}
-
-	_, _ = fh.Seek(0, 0) // reset to beginning of file to avoid EOF
-
-	switch imgType {
-	case "png":
-		return png.Decode(fh)
-	case "jpeg":
-		return jpeg.Decode(fh)
-	default:
-		return nil, errors.New("unsupported image type")
-	}
-}
-
-func listImagePaths(dir string) (paths []string, err error) {
-	err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		switch filepath.Ext(path) {
-		case ".jpg", ".jpeg", ".png":
-			paths = append(paths, path)
-		}
-		return nil
-	})
-
-	return
 }
