@@ -43,8 +43,7 @@ func loop(a *App) error {
 	a.ui.imageInfos = getCWDImageInfos()
 
 	var ops op.Ops
-	for {
-		e := <-a.w.Events()
+	for e := range a.w.Events() {
 		switch e := e.(type) {
 		case key.Event:
 			if e.Name == key.NameEscape {
@@ -58,6 +57,7 @@ func loop(a *App) error {
 			e.Frame(gtx.Ops)
 		}
 	}
+	return nil
 }
 
 func getCWDImageInfos() []imageInfo {
@@ -68,15 +68,13 @@ func getCWDImageInfos() []imageInfo {
 
 	var imgInfos []imageInfo
 	for path, data := range images {
-		imgInfos = append(imgInfos,
-			imageInfo{
-				path:    path,
-				imgData: data,
-				checkboxSelected: &widget.Bool{
-					Value: false,
-				},
+		imgInfos = append(imgInfos, imageInfo{
+			path:    path,
+			imgData: data,
+			checkboxSelected: &widget.Bool{
+				Value: false,
 			},
-		)
+		})
 	}
 
 	return imgInfos
