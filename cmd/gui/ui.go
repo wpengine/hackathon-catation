@@ -9,8 +9,10 @@ import (
 	"gioui.org/layout"
 	"gioui.org/op/paint"
 	"gioui.org/text"
+	"gioui.org/unit"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
+
 	"github.com/wpengine/hackathon-catation/cmd/uploader/pinata"
 )
 
@@ -74,7 +76,8 @@ func (u *UI) renderHeading(gtx layout.Context) layout.Dimensions {
 }
 
 func (u *UI) renderUploadButton(gtx layout.Context) layout.Dimensions {
-	return material.Button(u.theme, u.uploadButton, "Upload").Layout(gtx)
+	return layout.UniformInset(unit.Dp(10)).Layout(gtx,
+		material.Button(u.theme, u.uploadButton, "Upload").Layout)
 }
 
 func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
