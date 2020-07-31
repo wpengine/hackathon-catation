@@ -28,7 +28,7 @@ type imageRow struct {
 	path     string
 	contents image.Image
 
-	selected *widget.Bool
+	selected widget.Bool
 }
 
 func newUI() *UI {
@@ -88,7 +88,7 @@ func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
 				return widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout(gtx)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return material.CheckBox(u.theme, u.images[i].selected, u.images[i].path).Layout(gtx)
+				return material.CheckBox(u.theme, &u.images[i].selected, u.images[i].path).Layout(gtx)
 			}),
 		)
 	})

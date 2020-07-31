@@ -14,7 +14,6 @@ import (
 	"gioui.org/io/system"
 	"gioui.org/layout"
 	"gioui.org/op"
-	"gioui.org/widget"
 )
 
 func main() {
@@ -70,7 +69,6 @@ func findImages(basedir string) []imageRow {
 		images = append(images, imageRow{
 			path:     path,
 			contents: img,
-			selected: &widget.Bool{},
 		})
 		return nil
 	})
