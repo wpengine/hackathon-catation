@@ -27,7 +27,7 @@ func loop() {
 		app.Title("Catation"),
 	)
 	ui := newUI()
-	ui.imageInfos = findImages(".")
+	ui.images = findImages(".")
 
 	var ops op.Ops
 	for e := range window.Events() {
@@ -50,8 +50,8 @@ func loop() {
 	os.Exit(0)
 }
 
-func findImages(basedir string) []imageInfo {
-	var imgInfos []imageInfo
+func findImages(basedir string) []imageRow {
+	var images []imageRow
 
 	err := filepath.Walk(basedir, func(path string, info os.FileInfo, err error) error {
 		switch filepath.Ext(path) {
@@ -67,12 +67,10 @@ func findImages(basedir string) []imageInfo {
 			return nil
 		}
 
-		imgInfos = append(imgInfos, imageInfo{
-			path:    path,
-			imgData: img,
-			checkboxSelected: &widget.Bool{
-				Value: false,
-			},
+		images = append(images, imageRow{
+			path:     path,
+			contents: img,
+			selected: &widget.Bool{},
 		})
 		return nil
 	})
@@ -80,7 +78,7 @@ func findImages(basedir string) []imageInfo {
 	if err != nil {
 		log.Println("error listing images:", err)
 	}
-	return imgInfos
+	return images
 }
 
 func parseImage(path string) (image.Image, error) {

@@ -14,39 +14,37 @@ import (
 	"github.com/wpengine/hackathon-catation/cmd/uploader/pinata"
 )
 
-var theme *material.Theme
-
 type UI struct {
-	imageList       *layout.List
-	imageInfos      []imageInfo
-	buttonClickable *widget.Clickable
+	theme        *material.Theme
+	imageList    *layout.List
+	uploadButton *widget.Clickable
+
+	images []imageRow
 }
 
-type imageInfo struct {
-	path             string
-	imgData          image.Image
-	checkboxSelected *widget.Bool
-}
+type imageRow struct {
+	path     string
+	contents image.Image
 
-func init() {
-	theme = material.NewTheme(gofont.Collection())
+	selected *widget.Bool
 }
 
 func newUI() *UI {
 	return &UI{
+		theme: material.NewTheme(gofont.Collection()),
 		imageList: &layout.List{
 			Axis: layout.Vertical,
 		},
-		buttonClickable: &widget.Clickable{},
+		uploadButton: &widget.Clickable{},
 	}
 }
 
 func (u *UI) layout(gtx layout.Context) {
-	for range u.buttonClickable.Clicks() {
+	for range u.uploadButton.Clicks() {
 		var paths []string
-		for _, imgInfo := range u.imageInfos {
-			if imgInfo.checkboxSelected.Value {
-				paths = append(paths, imgInfo.path)
+		for _, img := range u.images {
+			if img.selected.Value {
+				paths = append(paths, img.path)
 			}
 		}
 
@@ -69,25 +67,25 @@ func (u *UI) layout(gtx layout.Context) {
 }
 
 func (u *UI) renderHeading(gtx layout.Context) layout.Dimensions {
-	l := material.H3(theme, "Select Photos To Share")
+	l := material.H3(u.theme, "Select Photos To Share")
 	l.Color = color.RGBA{127, 0, 0, 255} // maroon
 	l.Alignment = text.Middle
 	return l.Layout(gtx)
 }
 
 func (u *UI) renderUploadButton(gtx layout.Context) layout.Dimensions {
-	return material.Button(theme, u.buttonClickable, "Upload").Layout(gtx)
+	return material.Button(u.theme, u.uploadButton, "Upload").Layout(gtx)
 }
 
 func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
 	l := u.imageList
-	return l.Layout(gtx, len(u.imageInfos), func(gtx layout.Context, index int) layout.Dimensions {
+	return l.Layout(gtx, len(u.images), func(gtx layout.Context, i int) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return widget.Image{Src: paint.NewImageOp(u.imageInfos[index].imgData)}.Layout(gtx)
+				return widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout(gtx)
 			}),
 			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return material.CheckBox(theme, u.imageInfos[index].checkboxSelected, u.imageInfos[index].path).Layout(gtx)
+				return material.CheckBox(u.theme, u.images[i].selected, u.images[i].path).Layout(gtx)
 			}),
 		)
 	})
