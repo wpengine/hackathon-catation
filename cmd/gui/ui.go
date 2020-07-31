@@ -21,8 +21,9 @@ import (
 var theme *material.Theme
 
 type UI struct {
-	imageList       *layout.List
-	buttonClickable *widget.Clickable
+	imageList        *layout.List
+	buttonClickable  *widget.Clickable
+	checkboxSelected *widget.Bool
 }
 
 func init() {
@@ -34,7 +35,8 @@ func newUI() *UI {
 		imageList: &layout.List{
 			Axis: layout.Vertical,
 		},
-		buttonClickable: &widget.Clickable{},
+		buttonClickable:  &widget.Clickable{},
+		checkboxSelected: &widget.Bool{},
 	}
 }
 
@@ -72,7 +74,14 @@ func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
 
 	l := u.imageList
 	return l.Layout(gtx, len(images), func(gtx layout.Context, index int) layout.Dimensions {
-		return widget.Image{Src: paint.NewImageOp(images[index])}.Layout(gtx)
+		return layout.Flex{}.Layout(gtx,
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return widget.Image{Src: paint.NewImageOp(images[index])}.Layout(gtx)
+			}),
+			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
+				return material.CheckBox(theme, u.checkboxSelected, "label").Layout(gtx)
+			}),
+		)
 	})
 }
 
