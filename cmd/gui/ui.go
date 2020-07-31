@@ -55,16 +55,9 @@ func (u *UI) layout(gtx layout.Context) {
 	}
 
 	layout.Flex{Axis: layout.Vertical}.Layout(gtx,
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.renderHeading(gtx)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			return u.renderUploadButton(gtx)
-		}),
-		layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-			gtx.Constraints.Min.X = gtx.Constraints.Max.X
-			return u.renderImages(gtx)
-		}),
+		layout.Rigid(u.renderHeading),
+		layout.Rigid(u.renderUploadButton),
+		layout.Rigid(u.renderImages),
 	)
 }
 
@@ -81,15 +74,12 @@ func (u *UI) renderUploadButton(gtx layout.Context) layout.Dimensions {
 }
 
 func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
+	gtx.Constraints.Min.X = gtx.Constraints.Max.X
 	l := u.imageList
 	return l.Layout(gtx, len(u.images), func(gtx layout.Context, i int) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout(gtx)
-			}),
-			layout.Rigid(func(gtx layout.Context) layout.Dimensions {
-				return material.CheckBox(u.theme, &u.images[i].selected, u.images[i].path).Layout(gtx)
-			}),
+			layout.Rigid(widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout),
+			layout.Rigid(material.CheckBox(u.theme, &u.images[i].selected, u.images[i].path).Layout),
 		)
 	})
 }
