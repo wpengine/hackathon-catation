@@ -33,6 +33,7 @@ func loop(w *app.Window) error {
 		case system.FrameEvent:
 			gtx := layout.NewContext(&ops, e)
 			Layout(gtx)
+			Render(gtx)
 			e.Frame(gtx.Ops)
 		}
 	}
