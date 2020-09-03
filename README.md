@@ -1,15 +1,19 @@
 # Catation - an experiment in IPFS photo sharing
 
-**IMPORTANT NOTE:** Catation is a one-off experiment built over a hackathon at WPEngine,
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
+**⚠️⚠️⚠️ IMPORTANT NOTE: ⚠️⚠️⚠️** Catation is a one-off experiment built over a hackathon at WPEngine,
 with explicitly **no official plans for maintenance or support from WPEngine**.
 The project is released for free under GPL as an act of gratitude towards the FLOSS community.
 You are more than welcome to fork it & develop further on your own,
 as long as you adhere to the GPL license terms.
 The project **is a quick & dirty prototype**,
 thus it may and does use various **horrible & amazing shortcuts**
-and is certainly **not ready for production-like use**.
+and is certainly **not ready for production-like use**. ⚠️⚠️⚠️
 
-Catation is an experimental app for easy sharing of photo albums with non-tech people, using IPFS.
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
+**Catation** is an experimental app for easy sharing of photo albums with non-tech people, using IPFS.
 The pitch tagline is "Dropbox for IPFS", or:
 "Easily share your cat & vacation photos with your family & friends!"
 (\* dog photos are encouraged as well)
