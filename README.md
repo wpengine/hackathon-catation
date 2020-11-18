@@ -18,6 +18,25 @@ The pitch tagline is "Dropbox for IPFS", or:
 "Easily share your cat & vacation photos with your family & friends!"
 (\* dog photos are encouraged as well)
 
+![GUI screenshot](images/screenshot.01.png)
+
+## Running
+
+ 1. Go to https://pinata.cloud, create an account and copy your new "API key" and "Secret API key" into environment variables:
+
+        $ export PINATA_API_KEY=...
+        $ export PINATA_SECRET_API_KEY=...
+
+ 2. Go to https://bit.ly, create an account and copy your new "API key" into an environment variable:
+
+        $ export BITLY_API_KEY=...
+
+ 3. Start Catation GUI:
+
+        $ go run ./cmd/gui
+
+## Internal architecture details
+
 The main technical idea & workflow of the app is:
  1. You pick a set of photos using a (cross-platform) GUI interface ([`./cmd/gui`](./cmd/gui))
     - The gui app wraps all the following steps, you don't need to run them manually - they're listed just to explain the architecture & data flow.
