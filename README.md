@@ -35,6 +35,24 @@ The pitch tagline is "Dropbox for IPFS", or:
 
         $ go run ./cmd/gui
 
+ 4. Scroll down and select checkboxes for the photos you want to share.
+ 5. Click **[Upload]** button.
+ 6. Observe the terminal window, and wait till a bit.ly URL shows up:
+
+        2020/11/18 11:02:23 index.html --> /ipfs/QmXp2vE9rzPnUGucfB7zZ7pfa9uPYNjMTstmcuiFPBoYhz
+        2020/11/18 11:02:23 Pinning /ipfs/QmXp2vE9rzPnUGucfB7zZ7pfa9uPYNjMTstmcuiFPBoYhz containing "index.html"
+        2020/11/18 11:02:32 pinned 1/2: images/cat-2.jpg
+        2020/11/18 11:02:36 pinned 2/2: images/cat-1.jpg
+        2020/11/18 11:02:40 UPLOAD SUCCESSFUL! ---> /ipfs/QmXp2vE9rzPnUGucfB7zZ7pfa9uPYNjMTstmcuiFPBoYhz
+        2020/11/18 11:02:40 Waiting for remaining images...
+        
+        
+        >>>>>
+        >>>>>     https://bit.ly/2K8R2Bd
+        >>>>>
+
+ 7. Copy this link and share the album with your friends and family!
+
 ## Internal architecture details
 
 The main technical idea & workflow of the app is:
