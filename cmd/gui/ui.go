@@ -17,27 +17,29 @@ import (
 )
 
 type UI struct {
-	theme        *material.Theme
+	images []imageRow
+
+	// Widgets
 	imageList    *layout.List
 	uploadButton *widget.Clickable
-
-	images []imageRow
+	theme        *material.Theme
 }
 
 type imageRow struct {
 	path     string
 	contents image.Image
 
+	// Widgets
 	selected widget.Bool
 }
 
 func newUI() *UI {
 	return &UI{
-		theme: material.NewTheme(gofont.Collection()),
 		imageList: &layout.List{
 			Axis: layout.Vertical,
 		},
 		uploadButton: &widget.Clickable{},
+		theme:        material.NewTheme(gofont.Collection()),
 	}
 }
 
