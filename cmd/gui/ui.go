@@ -14,6 +14,7 @@ import (
 	"gioui.org/widget/material"
 
 	"github.com/wpengine/hackathon-catation/cmd/uploader/pinata"
+	"github.com/wpengine/hackathon-catation/xui/xwidget"
 )
 
 type UI struct {
@@ -80,8 +81,8 @@ func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
 	l := u.imageList
 	return l.Layout(gtx, len(u.images), func(gtx layout.Context, i int) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
-			// layout.Flexed(1, xwidget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout),
-			layout.Flexed(1, widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout),
+			layout.Flexed(1, xwidget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout),
+			// layout.Flexed(1, widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout),
 			layout.Rigid(material.CheckBox(u.theme, &u.images[i].selected, u.images[i].path).Layout),
 		)
 	})
