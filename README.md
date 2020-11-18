@@ -1,5 +1,7 @@
 # Catation - an experiment in IPFS photo sharing
 
+![GUI screenshot](images/screenshot.01.png)
+
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
 **⚠️⚠️⚠️ IMPORTANT NOTE: ⚠️⚠️⚠️** Catation is a one-off experiment built over a hackathon at WPEngine,
@@ -17,8 +19,6 @@ and is certainly **not ready for production-like use**. ⚠️⚠️⚠️
 The pitch tagline is "Dropbox for IPFS", or:
 "Easily share your cat & vacation photos with your family & friends!"
 (\* dog photos are encouraged as well)
-
-![GUI screenshot](images/screenshot.01.png)
 
 ## Running
 
