@@ -5,6 +5,7 @@ type Hash = string
 type NamedHash struct {
 	Hash
 	Name string // optional; can be filename or path [?]
+	Size int64  // optional; in bytes [TODO: 0 or empty?]
 }
 
 type Pup interface {

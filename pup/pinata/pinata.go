@@ -38,12 +38,17 @@ func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
 	}
 	defer resp.Body.Close()
 
+	// resp.Body = ioutil.NopCloser(io.TeeReader(resp.Body, os.Stderr))
 	// FIXME: if response is failed because e.g. missing API keys, return meaningful error instead of empty + nil
 
 	// parse response
 	var rows struct {
 		Rows []struct {
-			Hash string `json:"ipfs_pin_hash"`
+			Hash     string `json:"ipfs_pin_hash"`
+			Size     int64
+			Metadata struct {
+				Name string
+			}
 		}
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&rows); err != nil {
@@ -65,6 +70,8 @@ func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
 		if m == nil || m[row.Hash] {
 			list = append(list, pup.NamedHash{
 				Hash: row.Hash,
+				Name: row.Metadata.Name,
+				Size: row.Size,
 			})
 		}
 	}
