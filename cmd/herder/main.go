@@ -2,30 +2,54 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/dchest/uniuri"
 	"github.com/icza/gowut/gwu"
 	"golang.org/x/image/draw"
+
+	"github.com/wpengine/hackathon-catation/pup/pinata"
 )
 
+type config struct {
+	Pinata *pinata.API
+}
+
 func main() {
+	// Read config file
+	cfg := readConfig()
+
+	// Fetch hashes using pup/pinata/ API
+	cids, err := cfg.Pinata.Fetch(nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// TODO: fetch thumbnails of those hashes using cmd/downloader/
+	files := []file{}
+	for _, c := range cids {
+		files = append(files, file{
+			hash:     c.Hash,
+			filename: c.Name,
+		})
+	}
+
 	// Create and build a window
 	win := gwu.NewWindow("main", "Herder test window")
 	win.Style().SetFullWidth()
 	// win.SetHAlign(gwu.HACenter)
 	// win.SetCellPadding(2)
 
-	// Build a table, each row represents one pin
+	// Build a table, each row represents one file
 	t := gwu.NewTable()
 	win.Add(t)
 	t.SetBorder(1)
@@ -34,7 +58,6 @@ func main() {
 	t.Add(gwu.NewLabel("Thumbnail"), 0, 0)
 	t.Add(gwu.NewLabel("Hash"), 0, 1)
 	t.Add(gwu.NewLabel("Filename"), 0, 2)
-	files := fetchImages(".")
 	hashes := map[string]*file{}
 	for i, f := range files {
 		t.Add(gwu.NewImage("", "/hash/"+f.hash), 1+i, 0)
@@ -66,50 +89,32 @@ func main() {
 	server.Start("main")
 }
 
+func readConfig() config {
+	raw, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error: cannot read config.json:", err)
+		fmt.Fprintln(os.Stderr, "HINT: example config.json:")
+		v, _ := json.MarshalIndent(config{
+			Pinata: &pinata.API{Key: "", Secret: ""},
+		}, "", "  ")
+		fmt.Fprintln(os.Stderr, string(v))
+		os.Exit(1)
+	}
+	cfg := config{}
+	err = json.Unmarshal(raw, &cfg)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "error: cannot decode config.json:", err)
+		os.Exit(1)
+	}
+	return cfg
+}
+
 type file struct {
 	// thumbnail image.Image
 	contents []byte
 	filename string
 	hash     string
 	pinned   []bool
-}
-
-func fetchImages(basedir string) (files []file) {
-	filepath.Walk(basedir, func(path string, info os.FileInfo, err error) error {
-		switch filepath.Ext(path) {
-		case ".jpg", ".jpeg", ".png":
-			// ok
-		default:
-			return nil
-		}
-
-		f, err := os.Open(path)
-		if err != nil {
-			log.Println("error", err)
-			return nil
-		}
-		defer f.Close()
-
-		th, err := thumbnailImage(f, 100, 100)
-		if err != nil {
-			log.Println("error", err)
-			return nil
-		}
-
-		files = append(files, file{
-			// thumbnail: img,
-			contents: th,
-			filename: path,
-			hash:     uniuri.New(),
-			pinned: []bool{
-				true,
-				false,
-				false,
-			},
-		})
-		return nil
-	})
-	return
 }
 
 func thumbnailImage(r io.Reader, maxw, maxh int) ([]byte, error) {
