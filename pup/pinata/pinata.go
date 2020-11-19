@@ -120,6 +120,32 @@ func (api *API) Pin(ctx context.Context, hash pup.Hash) error {
 	return nil
 }
 
+func (api *API) Unpin(ctx context.Context, hash pup.Hash) error {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodDelete,
+		fmt.Sprintf("https://api.pinata.cloud/pinning/unpin/%s", hash),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("pinata: removing hash %q: %w", hash, err)
+	}
+
+	req.Header.Add("pinata_api_key", api.Key)
+	req.Header.Add("pinata_secret_api_key", api.Secret)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("pinata: removing hash %q: %w", hash, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("pinata: unpin call returned HTTP code %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
 /*
 func (api *API) isPinned(ctx context.Context, hash string) (bool, error) {
 	// TODO: use some metadata, otherwise this is very ineffective and currently limited to 1000 pins

@@ -114,3 +114,28 @@ func (c *Client) Pin(ctx context.Context, hash pup.Hash) error {
 
 	return nil
 }
+
+func (c *Client) Unpin(ctx context.Context, hash pup.Hash) error {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodDelete,
+		c.endpoint("pin/%s", hash).String(),
+		nil,
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", c.token))
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		// todo: better errors
+		return fmt.Errorf("unable to unpin hash")
+	}
+
+	return nil
+}
