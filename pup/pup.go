@@ -14,6 +14,6 @@ type Pup interface {
 	// Fetch retrieves a list of pinned hashes. If filter is non-empty, the
 	// returned list will contain only hashes from the filter list.
 	Fetch(ctx context.Context, filter []Hash) ([]NamedHash, error)
-	// Pin(ctx context.Context, hash Hash) error
-	// TODO: Unpin(Hash) error
+	Pin(ctx context.Context, hash Hash) error
+	//Unpin(ctx context.Context, hash Hash) error
 }

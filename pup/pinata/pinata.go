@@ -1,6 +1,7 @@
 package pinata
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -84,7 +85,6 @@ func (api *API) Fetch(ctx context.Context, filter []pup.Hash) ([]pup.NamedHash, 
 	return list, nil
 }
 
-/*
 func (api *API) Pin(ctx context.Context, hash pup.Hash) error {
 	payload, err := json.Marshal(map[string]string{
 		"hashToPin": hash,
@@ -112,37 +112,15 @@ func (api *API) Pin(ctx context.Context, hash pup.Hash) error {
 	if err != nil {
 		return fmt.Errorf("pinata: adding hash %q: %w", hash, err)
 	}
-	defer resp.Body.Close()
 
-	// FIXME: if response is failed because e.g. missing API keys, return meaningful error instead of empty + nil
-
-	// parse response
-	var r PinResponse
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return fmt.Errorf("pinata: adding hash %q: decoding response: %w", hash, err)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("pinata: pin call returned HTTP code %d", resp.StatusCode)
 	}
 
-	// Wait until verified successful pin
-	var done bool
-
-	for done == false {
-		done, err := api.isPinned(ctx, hash)
-		if err != nil {
-			return fmt.Errorf("error checking pin status: %v", err)
-		}
-		select {
-		case done == true:
-			return nil
-		case <-ctx.Done():
-			return fmt.Error("context cancelled")
-		case time.After(time.Second):
-			continue
-		}
-	}
-
-	return &r, nil
+	return nil
 }
 
+/*
 func (api *API) isPinned(ctx context.Context, hash string) (bool, error) {
 	// TODO: use some metadata, otherwise this is very ineffective and currently limited to 1000 pins
 
