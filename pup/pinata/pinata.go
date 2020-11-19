@@ -1,6 +1,8 @@
 package pinata
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -76,4 +78,106 @@ func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
 		}
 	}
 	return list, nil
+}
+
+func (api *API) Pin(ctx context.Context, hash pup.Hash) error {
+	payload, err := json.Marshal(map[string]string{
+		"hashToPin": hash,
+	})
+	if err != nil {
+		// Logic bug, should never happen
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		"https://api.pinata.cloud/pinning/pinByHash",
+		bytes.NewReader(payload),
+	)
+	if err != nil {
+		return fmt.Errorf("pinata: adding hash %q: %w", hash, err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("pinata_api_key", api.Key)
+	req.Header.Add("pinata_secret_api_key", api.Secret)
+
+	// execute the request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("pinata: adding hash %q: %w", hash, err)
+	}
+	defer resp.Body.Close()
+
+	// FIXME: if response is failed because e.g. missing API keys, return meaningful error instead of empty + nil
+
+	// parse response
+	var r PinResponse
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return fmt.Errorf("pinata: adding hash %q: decoding response: %w", hash, err)
+	}
+
+	// Wait until verified successful pin
+	var done bool
+
+	for done == false {
+		done, err := api.isPinned(ctx, hash)
+		if err != nil {
+			return fmt.Errorf("error checking pin status: %v", err)
+		}
+		select {
+		case done == true:
+			return nil
+		case <-ctx.Done():
+			return fmt.Error("context cancelled")
+		case time.After(time.Second):
+			continue
+		}
+	}
+
+	return &r, nil
+}
+
+func (api *API) isPinned(ctx context.Context, hash string) (bool, error) {
+	// TODO: use some metadata, otherwise this is very ineffective and currently limited to 1000 pins
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"https://api.pinata.cloud/data/pinList?status=pinned",
+		nil,
+	)
+	if err != nil {
+		return false, fmt.Errorf("pinata: querying hash %q: %w", hash, err)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	req.Header.Add("pinata_api_key", api.Key)
+	req.Header.Add("pinata_secret_api_key", api.Secret)
+
+	// execute the request
+	c := &http.Client{Timeout: 10 * time.Second}
+	resp, err := c.Do(req)
+	if err != nil {
+		return false, fmt.Errorf("pinata: querying hash %q: %w", hash, err)
+	}
+	defer resp.Body.Close()
+
+	// FIXME: if response is failed because e.g. missing API keys, return meaningful error instead of empty + nil
+
+	// parse response
+	var r struct {
+		Rows []struct {
+			IPFSPinHash string `json:"ipfs_pin_hash"`
+		}
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
+		return false, fmt.Errorf("pinata: querying hash %q: decoding response: %w", hash, err)
+	}
+
+	for _, row := range r.Rows {
+		if row.IPFSPinHash == hash {
+			return true, nil
+		}
+	}
+	return false, nil
 }
