@@ -1,10 +1,10 @@
 package pinata
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/wpengine/hackathon-catation/pup"
 )
@@ -16,11 +16,19 @@ type API struct {
 	Key, Secret string
 }
 
-func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
+func New(key, secret string) *API {
+	return &API{Key: key, Secret: secret}
+}
+
+func (api *API) Fetch(ctx context.Context, filter []pup.Hash) ([]pup.NamedHash, error) {
 	// TODO: use some metadata, otherwise this func is very ineffective and currently limited to 1000 pins (TODO: first, check if they didn't publish some newer API)
 
-	req, err := http.NewRequest(http.MethodGet,
-		"https://api.pinata.cloud/data/pinList?status=pinned", nil)
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"https://api.pinata.cloud/data/pinList?status=pinned",
+		nil,
+	)
 	if err != nil {
 		// Logic bug, should never happen
 		panic(fmt.Errorf("pinata: building fetch request: %w", err))
@@ -30,9 +38,7 @@ func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
 	req.Header.Add("pinata_secret_api_key", api.Secret)
 
 	// execute the request
-	// TODO: [LATER] configurable timeout - or rather, pass Context as Fetch argument
-	c := &http.Client{Timeout: 10 * time.Second}
-	resp, err := c.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("pinata: fetching: %w", err)
 	}

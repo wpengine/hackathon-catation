@@ -41,7 +41,7 @@ func main() {
 	defer node.Close()
 
 	// Fetch hashes using pup/pinata/ API
-	cids, err := cfg.Pinata.Fetch(nil)
+	cids, err := cfg.Pinata.Fetch(context.Background(), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
