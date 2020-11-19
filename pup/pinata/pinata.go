@@ -1,8 +1,6 @@
 package pinata
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -80,6 +78,7 @@ func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
 	return list, nil
 }
 
+/*
 func (api *API) Pin(ctx context.Context, hash pup.Hash) error {
 	payload, err := json.Marshal(map[string]string{
 		"hashToPin": hash,
@@ -181,3 +180,4 @@ func (api *API) isPinned(ctx context.Context, hash string) (bool, error) {
 	}
 	return false, nil
 }
+*/
