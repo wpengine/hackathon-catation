@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -12,11 +13,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/icza/gowut/gwu"
+	ifiles "github.com/ipfs/go-ipfs-files"
+	icorepath "github.com/ipfs/interface-go-ipfs-core/path"
 	"golang.org/x/image/draw"
 
+	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
 	"github.com/wpengine/hackathon-catation/pup/pinata"
 )
 
@@ -28,6 +33,13 @@ func main() {
 	// Read config file
 	cfg := readConfig()
 
+	// Start IPFS
+	node, err := ipfs.Start()
+	if err != nil {
+		panic(err)
+	}
+	defer node.Close()
+
 	// Fetch hashes using pup/pinata/ API
 	cids, err := cfg.Pinata.Fetch(nil)
 	if err != nil {
@@ -35,12 +47,40 @@ func main() {
 	}
 
 	// TODO: fetch thumbnails of those hashes using cmd/downloader/
-	files := []file{}
+	hashes := sync.Map{}
 	for _, c := range cids {
-		files = append(files, file{
+		f := &file{
 			hash:     c.Hash,
 			filename: c.Name,
-		})
+		}
+		_, loaded := hashes.LoadOrStore(c.Hash, f)
+		if loaded {
+			continue
+		}
+		// new file - start fetching it in background
+		go func() {
+			log.Printf("%s - starting to fetch...", f.hash)
+			tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(f.hash))
+			if err != nil {
+				log.Printf("Could not get file with CID: %s", err)
+				return
+			}
+			log.Printf("%s - found", f.hash)
+			switch tree := tree.(type) {
+			case ifiles.File:
+				log.Printf("%s - is a file, thumbnailing", f.hash)
+				th, err := thumbnailImage(tree, 100, 100)
+				if err != nil {
+					log.Printf("Could not create thumbnail of %s: %s", f.hash, err)
+					return
+				}
+				f.contents = th
+				hashes.Store(f.hash, f)
+				// FIXME: ping GUI somehow to reload the image
+			default:
+				log.Printf("%s - is not a file, ignoring", f.hash)
+			}
+		}()
 	}
 
 	// Create and build a window
@@ -58,26 +98,29 @@ func main() {
 	t.Add(gwu.NewLabel("Thumbnail"), 0, 0)
 	t.Add(gwu.NewLabel("Hash"), 0, 1)
 	t.Add(gwu.NewLabel("Filename"), 0, 2)
-	hashes := map[string]*file{}
-	for i, f := range files {
-		t.Add(gwu.NewImage("", "/hash/"+f.hash), 1+i, 0)
-		hashes[f.hash] = &files[i]
-		t.Add(gwu.NewLabel(f.hash), 1+i, 1)
-		t.Add(gwu.NewLabel(f.filename), 1+i, 2)
+	i := 0
+	hashes.Range(func(_, value interface{}) bool {
+		i++
+		f := value.(*file)
+		t.Add(gwu.NewImage("", "/hash/"+f.hash), i, 0)
+		t.Add(gwu.NewLabel(f.hash), i, 1)
+		t.Add(gwu.NewLabel(f.filename), i, 2)
 		for j, b := range f.pinned {
 			c := gwu.NewCheckBox("")
-			t.Add(c, 1+i, 3+j)
+			t.Add(c, i, 3+j)
 			c.SetState(b)
 			// c.AddEHandler
 		}
-	}
+		return true // continue iterating
+	})
 
 	http.Handle("/hash/", http.StripPrefix("/hash/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		f := hashes[r.URL.Path]
-		if f == nil {
+		v, ok := hashes.Load(r.URL.Path)
+		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		f := v.(*file)
 		http.ServeContent(w, r, f.filename, time.Time{}, bytes.NewReader(f.contents))
 	})))
 
