@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	_ "image/jpeg"
-	_ "image/png"
-	"io/ioutil"
+	"image/jpeg"
+	"image/png"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -15,6 +15,7 @@ import (
 
 	"github.com/dchest/uniuri"
 	"github.com/icza/gowut/gwu"
+	"golang.org/x/image/draw"
 )
 
 func main() {
@@ -82,7 +83,14 @@ func fetchImages(basedir string) (files []file) {
 			return nil
 		}
 
-		data, err := readImage(path)
+		f, err := os.Open(path)
+		if err != nil {
+			log.Println("error", err)
+			return nil
+		}
+		defer f.Close()
+
+		th, err := thumbnailImage(f, 100, 100)
 		if err != nil {
 			log.Println("error", err)
 			return nil
@@ -90,7 +98,7 @@ func fetchImages(basedir string) (files []file) {
 
 		files = append(files, file{
 			// thumbnail: img,
-			contents: data,
+			contents: th,
 			filename: path,
 			hash:     uniuri.New(),
 			pinned: []bool{
@@ -104,22 +112,46 @@ func fetchImages(basedir string) (files []file) {
 	return
 }
 
-func readImage(path string) ([]byte, error) {
-	buf, err := ioutil.ReadFile(path)
+func thumbnailImage(r io.Reader, maxw, maxh int) ([]byte, error) {
+	src, typ, err := image.Decode(r)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing image for thumbnail: %w", err)
 	}
 
-	_, typ, err := image.Decode(bytes.NewReader(buf))
-	if err != nil {
-		return nil, fmt.Errorf("parsing image %q: %w", path, err)
+	// Calculate thumbnail size
+	srcb := src.Bounds()
+	if srcb.Dx() > maxw || srcb.Dy() > maxh {
+		sx := float64(maxw) / float64(srcb.Dx())
+		sy := float64(maxh) / float64(srcb.Dy())
+		scale := sx
+		if sy < sx {
+			scale = sy
+		}
+		maxw = int(float64(srcb.Dx()) * scale)
+		maxh = int(float64(srcb.Dy()) * scale)
+	} else {
+		maxw, maxh = srcb.Dx(), srcb.Dy()
 	}
 
+	// Render the thumbnail
+	dst := image.NewRGBA(image.Rect(0, 0, maxw, maxh))
+	draw.ApproxBiLinear.Scale(dst, dst.Bounds(), src, srcb, draw.Src, nil)
+
+	// Encode the thumbnail back to original format
+	buf := bytes.NewBuffer(nil)
 	switch typ {
-	case "png", "jpeg":
-		return buf, nil
+	case "png":
+		err = png.Encode(buf, dst)
+		if err != nil {
+			return nil, fmt.Errorf("encoding png thumbnail: %w", err)
+		}
+		return buf.Bytes(), nil
 	default:
-		return nil, fmt.Errorf("parsing image %q: unsupported type %q", path, typ)
+		err = jpeg.Encode(buf, dst, nil)
+		if err != nil {
+			return nil, fmt.Errorf("encoding jpeg thumbnail: %w", err)
+		}
+		return buf.Bytes(), nil
 	}
 }
 
