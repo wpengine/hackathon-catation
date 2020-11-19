@@ -34,6 +34,7 @@ func main() {
 	r.HandleFunc("/pins", api.pinListHandler).Methods("GET")
 	r.HandleFunc("/pin/{hash}", api.pinCreateHandler).Methods("POST")
 	r.HandleFunc("/pin/{hash}", api.pinStatusHandler).Methods("GET")
+	r.HandleFunc("/pin/{hash}", api.pinRemoveHandler).Methods("DELETE")
 	r.Use(newAuthMiddleware(*token))
 
 	log.Printf("Starting HTTP API on %s...", *addr)

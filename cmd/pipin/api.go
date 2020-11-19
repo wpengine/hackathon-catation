@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -36,8 +35,7 @@ func (api *API) pinListHandler(w http.ResponseWriter, r *http.Request) {
 		pins = append(pins, pin.Path().Cid().String())
 	}
 
-	err = json.NewEncoder(w).Encode(pins)
-	if err != nil {
+	if err = json.NewEncoder(w).Encode(pins); err != nil {
 		log.Printf("error encoding to json: %v", err)
 	}
 }
@@ -51,18 +49,43 @@ func (api *API) pinCreateHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Printf("Could not get file with CID: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	err = api.ipfs.Pin().Add(context.Background(), testCID)
 	if err != nil {
 		log.Printf("Could not pin file with CID: %v", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
-	json.NewEncoder(w).Encode([]string{vars["hash"]})
+	if err = json.NewEncoder(w).Encode([]string{vars["hash"]}); err != nil {
+		log.Printf("error encoding to json: %v", err)
+	}
 }
 
 func (api *API) pinStatusHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	fmt.Fprintf(w, "pin status %q", vars["hash"])
+	_, pinned, err := api.ipfs.Pin().IsPinned(context.Background(), icorepath.New(vars["hash"]))
+	if err != nil {
+		log.Printf("Could not check pin status: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	if err = json.NewEncoder(w).Encode(map[string]interface{}{"pinned": pinned}); err != nil {
+		log.Printf("error encoding to json: %v", err)
+	}
+}
+
+func (api *API) pinRemoveHandler(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	err := api.ipfs.Pin().Rm(context.Background(), icorepath.New(vars["hash"]))
+	if err != nil {
+		log.Printf("Could not delete pin: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
+	if _, err = w.Write([]byte(`{"pinned": false}\n`)); err != nil {
+		log.Printf("error writing response: %v", err)
+	}
 }
