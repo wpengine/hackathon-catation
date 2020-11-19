@@ -23,16 +23,12 @@ func main() {
 
 	var (
 		pipinFlags = flag.NewFlagSet("pup pipin", flag.ExitOnError)
-		pipinHost  = pipinFlags.String("pipin-host", "pipin.velvetcache.org", "PiPin hostname")
-		pipinToken = pipinFlags.String("pipin-token", "", "PiPin authentication token")
+		pipinHost  = pipinFlags.String("host", "pipin.velvetcache.org", "PiPin hostname")
+		pipinToken = pipinFlags.String("token", "", "PiPin authentication token")
 
 		pinataFlags  = flag.NewFlagSet("pup pinata", flag.ExitOnError)
-		pinataKey    = pinataFlags.String("pinata-api-key", "", "Pinata service API key")
-		pinataSecret = pinataFlags.String("pinata-secret-api-key", "", "Pinata service secret API key")
-
-		options = []ff.Option{
-			ff.WithEnvVarNoPrefix(),
-		}
+		pinataKey    = pinataFlags.String("api-key", "", "Pinata service API key")
+		pinataSecret = pinataFlags.String("secret-api-key", "", "Pinata service secret API key")
 	)
 
 	//////////////////////////////////////////////////////////
@@ -95,7 +91,7 @@ func main() {
 		Name:        "pinata",
 		ShortUsage:  "pup pinata [flags] <command>",
 		FlagSet:     pinataFlags,
-		Options:     options,
+		Options:     []ff.Option{ff.WithEnvVarPrefix("PINATA")},
 		Subcommands: []*ffcli.Command{pinataList, pinataAdd, pinataRm},
 	}
 
@@ -158,7 +154,7 @@ func main() {
 		Name:        "pipin",
 		ShortUsage:  "pup pipin [flags] <command>",
 		FlagSet:     pipinFlags,
-		Options:     options,
+		Options:     []ff.Option{ff.WithEnvVarPrefix("PIPIN")},
 		Subcommands: []*ffcli.Command{pipinList, pipinAdd, pipinRm},
 	}
 
