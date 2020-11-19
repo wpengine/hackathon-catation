@@ -48,6 +48,7 @@ func main() {
 
 	// TODO: fetch thumbnails of those hashes using cmd/downloader/
 	hashes := sync.Map{}
+	thumbnails := make(chan string, 100)
 	for _, c := range cids {
 		f := &file{
 			hash:     c.Hash,
@@ -76,7 +77,8 @@ func main() {
 				}
 				f.contents = th
 				hashes.Store(f.hash, f)
-				// FIXME: ping GUI somehow to reload the image
+				log.Printf("%s - DONE", f.hash)
+				thumbnails <- f.hash
 			default:
 				log.Printf("%s - is not a file, ignoring", f.hash)
 			}
@@ -98,6 +100,7 @@ func main() {
 	t.Add(gwu.NewLabel("Thumbnail"), 0, 0)
 	t.Add(gwu.NewLabel("Hash"), 0, 1)
 	t.Add(gwu.NewLabel("Filename"), 0, 2)
+	// FIXME: somehow sort the images (how? by hash??? :/)
 	i := 0
 	hashes.Range(func(_, value interface{}) bool {
 		i++
@@ -114,6 +117,20 @@ func main() {
 		return true // continue iterating
 	})
 
+	// Start a timer, to detect when new thumbnails are ready and show them
+	s := gwu.NewTimer(1 * time.Second)
+	win.Add(s)
+	s.SetRepeat(true)
+	s.AddEHandlerFunc(func(e gwu.Event) {
+		select {
+		case h := <-thumbnails:
+			_ = h // TODO: only refresh specific thumbnail img
+			e.MarkDirty(t)
+		default:
+		}
+	}, gwu.ETypeStateChange)
+
+	// Serve thumbnails over HTTP for <img src="/hash/...">
 	http.Handle("/hash/", http.StripPrefix("/hash/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v, ok := hashes.Load(r.URL.Path)
 		if !ok {
