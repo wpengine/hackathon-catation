@@ -22,6 +22,7 @@ import (
 	"golang.org/x/image/draw"
 
 	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
+	"github.com/wpengine/hackathon-catation/pup"
 	"github.com/wpengine/hackathon-catation/pup/pinata"
 )
 
@@ -40,13 +41,24 @@ func main() {
 	}
 	defer node.Close()
 
+	// Initialize Pup plugins
+	type pupColumn struct {
+		i    int
+		name string
+		pup.Pup
+	}
+	pups := []pupColumn{}
+	if cfg.Pinata != nil {
+		pups = append(pups, pupColumn{len(pups), "pinata", cfg.Pinata})
+	}
+
 	// Fetch hashes using pup/pinata/ API
 	cids, err := cfg.Pinata.Fetch(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// TODO: fetch thumbnails of those hashes using cmd/downloader/
+	// Fetch thumbnails of those hashes using cmd/downloader/
 	hashes := sync.Map{}
 	thumbnails := make(chan string, 100)
 	for _, c := range cids {
@@ -91,7 +103,7 @@ func main() {
 	// win.SetHAlign(gwu.HACenter)
 	// win.SetCellPadding(2)
 
-	// Build a table, each row represents one file
+	// Start building a table, each row will represent one file
 	t := gwu.NewTable()
 	win.Add(t)
 	t.SetBorder(1)
@@ -100,6 +112,75 @@ func main() {
 	t.Add(gwu.NewLabel("Thumbnail"), 0, 0)
 	t.Add(gwu.NewLabel("Hash"), 0, 1)
 	t.Add(gwu.NewLabel("Filename"), 0, 2)
+	for _, p := range pups {
+		t.Add(gwu.NewLabel(p.name), 0, 3+p.i)
+	}
+	rows := make(chan file, 100)
+	{
+		// Every second, if there are new rows fetched, add them to the table
+		s := gwu.NewTimer(1 * time.Second)
+		s.SetRepeat(true)
+		nrows := 0
+		s.AddEHandlerFunc(func(e gwu.Event) {
+			for {
+				select {
+				case f := <-rows:
+					nrows++
+					t.Add(gwu.NewImage("", "/hash/"+f.hash), nrows, 0)
+					t.Add(gwu.NewLabel(f.hash), nrows, 1)
+					t.Add(gwu.NewLabel(f.filename), nrows, 2)
+					for j, b := range f.pinned {
+						c := gwu.NewCheckBox("")
+						t.Add(c, nrows, 3+j)
+						c.SetState(b)
+						// TODO: c.AddEHandler
+					}
+					e.MarkDirty(t) // TODO: do we need this here, or above is enough?
+				default:
+					return
+				}
+			}
+		}, gwu.ETypeStateChange)
+	}
+
+	// Start fetching rows to feed into the table
+	go func() {
+		// Infinite loop, iterating over all pups
+		for {
+			for _, p := range pups {
+				cids, err := p.Fetch(nil)
+				if err != nil {
+					log.Printf("Cannot fetch from %q: %s", p.name, err)
+					continue
+				}
+				fetched := map[string]bool{}
+				for _, c := range cids {
+					fetched[c.Hash] = true
+				}
+				// Un-check all hashes not in fetched
+				hashes.Range(func(_, value interface{}) bool {
+					f := value.(*file)
+					if !fetched[f.hash] {
+						f.pinned[p.i] = false
+					}
+					return true // continue iterating
+				})
+				// Add missing hashes
+				for _, c := range cids {
+					v, loaded := hashes.LoadOrStore(c.Hash, &file{
+						hash:     c.Hash,
+						filename: c.Name,
+						pinned:   make([]bool, len(pups)),
+					})
+					f := v.(*file)
+					// FIXME: data race!!!
+					f.pinned[p.i] = true
+				}
+			}
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
 	// FIXME: somehow sort the images (how? by hash??? :/)
 	i := 0
 	hashes.Range(func(_, value interface{}) bool {
