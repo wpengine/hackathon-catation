@@ -1,8 +1,134 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"image"
+	_ "image/jpeg"
+	_ "image/png"
+	"io/ioutil"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/dchest/uniuri"
+	"github.com/icza/gowut/gwu"
+)
+
+func main() {
+	// Create and build a window
+	win := gwu.NewWindow("main", "Herder test window")
+	win.Style().SetFullWidth()
+	// win.SetHAlign(gwu.HACenter)
+	// win.SetCellPadding(2)
+
+	// Build a table, each row represents one pin
+	t := gwu.NewTable()
+	win.Add(t)
+	t.SetBorder(1)
+	t.SetCellPadding(2)
+	t.EnsureSize(2, 2)
+	t.Add(gwu.NewLabel("Thumbnail"), 0, 0)
+	t.Add(gwu.NewLabel("Hash"), 0, 1)
+	t.Add(gwu.NewLabel("Filename"), 0, 2)
+	files := fetchImages(".")
+	hashes := map[string]*file{}
+	for i, f := range files {
+		t.Add(gwu.NewImage("", "/hash/"+f.hash), 1+i, 0)
+		hashes[f.hash] = &files[i]
+		t.Add(gwu.NewLabel(f.hash), 1+i, 1)
+		t.Add(gwu.NewLabel(f.filename), 1+i, 2)
+		for j, b := range f.pinned {
+			c := gwu.NewCheckBox("")
+			t.Add(c, 1+i, 3+j)
+			c.SetState(b)
+			// c.AddEHandler
+		}
+	}
+
+	http.Handle("/hash/", http.StripPrefix("/hash/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		f := hashes[r.URL.Path]
+		if f == nil {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		http.ServeContent(w, r, f.filename, time.Time{}, bytes.NewReader(f.contents))
+	})))
+
+	// Create and start a GUI server (omitting error check)
+	// TODO: port choice - randomize or take flag
+	server := gwu.NewServer("guitest", "localhost:8081")
+	server.SetText("Herder test app")
+	server.AddWin(win)
+	server.Start("main")
+}
+
+type file struct {
+	// thumbnail image.Image
+	contents []byte
+	filename string
+	hash     string
+	pinned   []bool
+}
+
+func fetchImages(basedir string) (files []file) {
+	filepath.Walk(basedir, func(path string, info os.FileInfo, err error) error {
+		switch filepath.Ext(path) {
+		case ".jpg", ".jpeg", ".png":
+			// ok
+		default:
+			return nil
+		}
+
+		data, err := readImage(path)
+		if err != nil {
+			log.Println("error", err)
+			return nil
+		}
+
+		files = append(files, file{
+			// thumbnail: img,
+			contents: data,
+			filename: path,
+			hash:     uniuri.New(),
+			pinned: []bool{
+				true,
+				false,
+				false,
+			},
+		})
+		return nil
+	})
+	return
+}
+
+func readImage(path string) ([]byte, error) {
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	_, typ, err := image.Decode(bytes.NewReader(buf))
+	if err != nil {
+		return nil, fmt.Errorf("parsing image %q: %w", path, err)
+	}
+
+	switch typ {
+	case "png", "jpeg":
+		return buf, nil
+	default:
+		return nil, fmt.Errorf("parsing image %q: unsupported type %q", path, typ)
+	}
+}
+
+/*
+import (
+	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"os"
 	"path/filepath"
@@ -24,28 +150,7 @@ func main() {
 		app.Title("Catation Herder"),
 	)
 	ui := ui{
-		pins: []pinUI{
-			{
-				thumbnail: nil, // FIXME
-				filename:  "",
-				hash:      "asdfasdfasdfsdf",
-				pinned: []widget.Bool{
-					{Value: true},
-					{Value: false},
-					{Value: false},
-				},
-			},
-			{
-				thumbnail: nil, // FIXME
-				filename:  "",
-				hash:      "hjkkhjhjkhkjhkjhjk",
-				pinned: []widget.Bool{
-					{Value: false},
-					{Value: true},
-					{Value: true},
-				},
-			},
-		},
+		pins:       fetchPins("."),
 		pinsLayout: layout.List{Axis: layout.Vertical},
 		theme:      material.NewTheme(gofont.Collection()),
 	}
@@ -103,6 +208,7 @@ func (ui *ui) render(gtx layout.Context) layout.Dimensions {
 			row := []layout.FlexChild{
 				// layout.Flexed(1, xwidget.Image{Src: paint.NewImageOp(ui.pins[i].thumbnail)}.Layout),
 				layout.Rigid(material.Label(th, unit.Dp(10), ui.pins[i].hash).Layout),
+				layout.Rigid(material.Label(th, unit.Dp(10), ui.pins[i].filename).Layout),
 			}
 			for j := range ui.pins[i].pinned {
 				row = append(row,
@@ -113,52 +219,4 @@ func (ui *ui) render(gtx layout.Context) layout.Dimensions {
 	)
 }
 
-func fetchPins(basedir string) (pins []pinUI) {
-	filepath.Walk(basedir, func(path string, info os.FileInfo, err error) error {
-		switch filepath.Ext(path) {
-		case ".jpg", ".jpeg", ".png":
-			// ok
-		default:
-			return nil
-		}
-
-		img, err := readImage(path)
-		if err != nil {
-			log.Println("error", err)
-			return nil
-		}
-
-		pins = append(pins, pinUI{
-			thumbnail: img,
-			filename:  path,
-			hash:      "asdfasdfasdf",
-			pinned: []widget.Bool{
-				{Value: true},
-				{Value: false},
-				{Value: false},
-			},
-		})
-		return nil
-	})
-	return
-}
-
-func readImage(path string) (image.Image, error) {
-	fh, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("parsing image: %w", err)
-	}
-	defer fh.Close()
-
-	img, typ, err := image.Decode(fh)
-	if err != nil {
-		return nil, fmt.Errorf("parsing image %q: %w", path, err)
-	}
-
-	switch typ {
-	case "png", "jpeg":
-		return img, nil
-	default:
-		return nil, fmt.Errorf("parsing image %q: unsupported type %q", path, typ)
-	}
-}
+*/

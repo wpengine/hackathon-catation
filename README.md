@@ -1,5 +1,8 @@
 # Catation - an experiment in IPFS photo sharing
 
+
+## TODO: GPLv3 (because gowut also)
+
 ![GUI screenshot](images/screenshot.01.png)
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️

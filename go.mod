@@ -4,6 +4,8 @@ go 1.14
 
 require (
 	gioui.org v0.0.0-20200726090339-83673ecb203f
+	github.com/dchest/uniuri v0.0.0-20200228104902-7aecb25e1fe5
+	github.com/icza/gowut v1.4.0
 	github.com/ipfs/go-datastore v0.4.4
 	github.com/ipfs/go-ipfs v0.6.0
 	github.com/ipfs/go-ipfs-config v0.8.0
