@@ -125,7 +125,6 @@ func main() {
 	rowsByHash := map[string]struct {
 		y        int
 		statuses []gwu.CheckBox
-		specs    []gwu.CheckBox // wanted/desired status
 	}{}
 	t := gwu.NewTable()
 	win.Add(t)
@@ -161,6 +160,8 @@ func main() {
 						t.Add(gwu.NewLabel(f.hash), r.y, 1)
 						t.Add(gwu.NewLabel(f.filename), r.y, 2)
 						for _, p := range pups {
+							p := p // capture the loop variable for use in closures
+
 							cell := gwu.NewHorizontalPanel()
 							t.Add(cell, r.y, 3+p.i)
 
@@ -169,37 +170,35 @@ func main() {
 							c.SetEnabled(false) // read-only, showing current status in pup
 							r.statuses = append(r.statuses, c)
 
-							// FIXME: XXX for simplicity, change to 2 buttons
-							c = gwu.NewCheckBox("")
-							cell.Add(c)
-							p := p // capture the loop variable for use in closure
-							c.AddEHandlerFunc(func(e gwu.Event) {
-								v := c.State()
-								// fmt.Println("v", v)
+							add := gwu.NewButton("📌")
+							cell.Add(add)
+							add.AddEHandlerFunc(func(e gwu.Event) {
 								ctx, release := context.WithTimeout(context.Background(), 2*time.Second)
 								defer release()
-								defer e.MarkDirty(c)
 								// TODO: make it more async & faster
-								log.Printf("--- check %s / %q = %v ---", f.hash, p.name, v)
-								if v {
-									err := p.Pup.Pin(ctx, f.hash)
-									if err != nil {
-										log.Printf("%s.Pin error: %s", p.name, err)
-										c.SetState(false)
-										return
-									}
-									log.Printf("%s.Pin success", p.name)
-								} else {
-									err := p.Pup.Unpin(ctx, f.hash)
-									if err != nil {
-										log.Printf("%s.Unpin error: %s", p.name, err)
-										c.SetState(true)
-										return
-									}
-									log.Printf("%s.Unpin success", p.name)
+								// log.Printf("--- check %s / %q = %v ---", f.hash, p.name, v)
+								err := p.Pup.Pin(ctx, f.hash)
+								if err != nil {
+									log.Printf("%s.Pin error: %s", p.name, err)
+									return
 								}
+								log.Printf("%s.Pin success", p.name)
 							}, gwu.ETypeClick)
-							r.specs = append(r.specs, c)
+
+							rm := gwu.NewButton("🗑")
+							cell.Add(rm)
+							rm.AddEHandlerFunc(func(e gwu.Event) {
+								ctx, release := context.WithTimeout(context.Background(), 2*time.Second)
+								defer release()
+								// TODO: make it more async & faster
+								// log.Printf("--- check %s / %q = %v ---", f.hash, p.name, v)
+								err := p.Pup.Unpin(ctx, f.hash)
+								if err != nil {
+									log.Printf("%s.Unpin error: %s", p.name, err)
+									return
+								}
+								log.Printf("%s.Unpin success", p.name)
+							}, gwu.ETypeClick)
 						}
 						e.MarkDirty(t)
 						go fetchThumbnail(thumbnails, &thumbnailsByHash, node, f.hash)
@@ -207,7 +206,6 @@ func main() {
 
 					// Change the status of a checkbox
 					r.statuses[f.ipup].SetState(f.checked)
-					// r.specs[f.ipup].SetState(f.checked) // TODO: race possibility
 					rowsByHash[f.hash] = r
 					e.MarkDirty(r.statuses[f.ipup])
 
