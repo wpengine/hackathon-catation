@@ -17,8 +17,6 @@ import (
 	"time"
 
 	"github.com/icza/gowut/gwu"
-	ifiles "github.com/ipfs/go-ipfs-files"
-	icorepath "github.com/ipfs/interface-go-ipfs-core/path"
 	"golang.org/x/image/draw"
 
 	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
@@ -52,103 +50,56 @@ func main() {
 		pups = append(pups, pupColumn{len(pups), "pinata", cfg.Pinata})
 	}
 
-	// Fetch hashes using pup/pinata/ API
-	cids, err := cfg.Pinata.Fetch(nil)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// // Fetch thumbnails of hashes using cmd/downloader/
+	// thumbnails := make(chan string, 100)
+	// for _, c := range cids {
+	// 	f := &file{
+	// 		hash:     c.Hash,
+	// 		filename: c.Name,
+	// 	}
+	// 	_, loaded := hashes.LoadOrStore(c.Hash, f)
+	// 	if loaded {
+	// 		continue
+	// 	}
+	// 	// new file - start fetching it in background
+	// 	go func() {
+	// 		log.Printf("%s - starting to fetch...", f.hash)
+	// 		tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(f.hash))
+	// 		if err != nil {
+	// 			log.Printf("Could not get file with CID: %s", err)
+	// 			return
+	// 		}
+	// 		log.Printf("%s - found", f.hash)
+	// 		switch tree := tree.(type) {
+	// 		case ifiles.File:
+	// 			log.Printf("%s - is a file, thumbnailing", f.hash)
+	// 			th, err := thumbnailImage(tree, 100, 100)
+	// 			if err != nil {
+	// 				log.Printf("Could not create thumbnail of %s: %s", f.hash, err)
+	// 				return
+	// 			}
+	// 			f.contents = th
+	// 			hashes.Store(f.hash, f)
+	// 			log.Printf("%s - DONE", f.hash)
+	// 			thumbnails <- f.hash
+	// 		default:
+	// 			log.Printf("%s - is not a file, ignoring", f.hash)
+	// 		}
+	// 	}()
+	// }
 
-	// Fetch thumbnails of those hashes using cmd/downloader/
-	hashes := sync.Map{}
-	thumbnails := make(chan string, 100)
-	for _, c := range cids {
-		f := &file{
-			hash:     c.Hash,
-			filename: c.Name,
-		}
-		_, loaded := hashes.LoadOrStore(c.Hash, f)
-		if loaded {
-			continue
-		}
-		// new file - start fetching it in background
-		go func() {
-			log.Printf("%s - starting to fetch...", f.hash)
-			tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(f.hash))
-			if err != nil {
-				log.Printf("Could not get file with CID: %s", err)
-				return
-			}
-			log.Printf("%s - found", f.hash)
-			switch tree := tree.(type) {
-			case ifiles.File:
-				log.Printf("%s - is a file, thumbnailing", f.hash)
-				th, err := thumbnailImage(tree, 100, 100)
-				if err != nil {
-					log.Printf("Could not create thumbnail of %s: %s", f.hash, err)
-					return
-				}
-				f.contents = th
-				hashes.Store(f.hash, f)
-				log.Printf("%s - DONE", f.hash)
-				thumbnails <- f.hash
-			default:
-				log.Printf("%s - is not a file, ignoring", f.hash)
-			}
-		}()
-	}
-
-	// Create and build a window
-	win := gwu.NewWindow("main", "Herder test window")
-	win.Style().SetFullWidth()
-	// win.SetHAlign(gwu.HACenter)
-	// win.SetCellPadding(2)
-
-	// Start building a table, each row will represent one file
-	t := gwu.NewTable()
-	win.Add(t)
-	t.SetBorder(1)
-	t.SetCellPadding(2)
-	t.EnsureSize(2, 2)
-	t.Add(gwu.NewLabel("Thumbnail"), 0, 0)
-	t.Add(gwu.NewLabel("Hash"), 0, 1)
-	t.Add(gwu.NewLabel("Filename"), 0, 2)
-	for _, p := range pups {
-		t.Add(gwu.NewLabel(p.name), 0, 3+p.i)
-	}
+	// In a background loop, start fetching hashes from pups, to be fed into
+	// the GUI table.
+	//
+	// rowChange is a message describing how the GUI should toggle a checkbox
+	// for a particular file's row
+	hashes := sync.Map{} // map[string]*file
 	type rowChange struct {
-		file         // basic data of the row (esp. in case it needs to be newly added)
+		*file        // basic data of the row (esp. in case it needs to be newly added)
 		ipup    int  // which pup's checkbox to change
 		checked bool // to what state should the pup's checkbox be changed
 	}
 	rowChanges := make(chan rowChange, 100)
-	{
-		// Every second, if there are new rows fetched, add them to the table
-		s := gwu.NewTimer(1 * time.Second)
-		s.SetRepeat(true)
-		nrows := 0
-		s.AddEHandlerFunc(func(e gwu.Event) {
-			for {
-				select {
-				case f := <-rows:
-					nrows++
-					t.Add(gwu.NewImage("", "/hash/"+f.hash), nrows, 0)
-					t.Add(gwu.NewLabel(f.hash), nrows, 1)
-					t.Add(gwu.NewLabel(f.filename), nrows, 2)
-					for j, b := range f.pinned {
-						c := gwu.NewCheckBox("")
-						t.Add(c, nrows, 3+j)
-						c.SetState(b)
-						// TODO: c.AddEHandler
-					}
-					e.MarkDirty(t) // TODO: do we need this here, or above is enough?
-				default:
-					return
-				}
-			}
-		}, gwu.ETypeStateChange)
-	}
-
-	// Start fetching rows to feed into the table
 	go func() {
 		// Infinite loop, iterating over all pups
 		for {
@@ -166,42 +117,85 @@ func main() {
 				hashes.Range(func(_, value interface{}) bool {
 					f := value.(*file)
 					if !fetched[f.hash] {
-						f.pinned[p.i] = false
+						rowChanges <- rowChange{f, p.i, false}
 					}
 					return true // continue iterating
 				})
 				// Add missing hashes
 				for _, c := range cids {
-					v, loaded := hashes.LoadOrStore(c.Hash, &file{
+					f := &file{
 						hash:     c.Hash,
 						filename: c.Name,
 						pinned:   make([]bool, len(pups)),
-					})
-					f := v.(*file)
-					// FIXME: data race!!!
-					f.pinned[p.i] = true
+					}
+					rowChanges <- rowChange{f, p.i, true}
 				}
 			}
 			time.Sleep(1 * time.Second)
 		}
 	}()
 
+	// Create and build a window
+	win := gwu.NewWindow("main", "Herder test window")
+	win.Style().SetFullWidth()
+	// win.SetHAlign(gwu.HACenter)
+	// win.SetCellPadding(2)
+
+	// Start building a table, each row will represent one file
+	rowsByHash := map[string]struct {
+		y        int
+		statuses []gwu.CheckBox
+	}{}
+	t := gwu.NewTable()
+	win.Add(t)
+	t.SetBorder(1)
+	t.SetCellPadding(2)
+	t.EnsureSize(2, 2)
+	t.Add(gwu.NewLabel("Thumbnail"), 0, 0)
+	t.Add(gwu.NewLabel("Hash"), 0, 1)
+	t.Add(gwu.NewLabel("Filename"), 0, 2)
+	for _, p := range pups {
+		t.Add(gwu.NewLabel(p.name), 0, 3+p.i)
+	}
+	// Every second, if there are new rows fetched, add them to the table
+	{
+		s := gwu.NewTimer(1 * time.Second)
+		win.Add(s)
+		s.SetRepeat(true)
+		s.AddEHandlerFunc(func(e gwu.Event) {
+			for {
+				select {
+				case f := <-rowChanges:
+					r := rowsByHash[f.hash]
+
+					// Do we need to add a new row?
+					if r.statuses == nil {
+						r.y = len(rowsByHash) + 1
+						t.Add(gwu.NewImage("", "/hash/"+f.hash), r.y, 0)
+						t.Add(gwu.NewLabel(f.hash), r.y, 1)
+						t.Add(gwu.NewLabel(f.filename), r.y, 2)
+						for _, p := range pups {
+							// TODO: add clickable checkbox above, to allow changing the state
+							c := gwu.NewCheckBox("")
+							c.SetEnabled(false) // read-only, showing current status in pup
+							t.Add(c, r.y, 3+p.i)
+							r.statuses = append(r.statuses, c)
+						}
+						e.MarkDirty(t)
+					}
+
+					// Change the status of a checkbox
+					r.statuses[f.ipup].SetState(f.checked)
+					e.MarkDirty(r.statuses[f.ipup])
+
+				default:
+					return
+				}
+			}
+		}, gwu.ETypeStateChange)
+	}
+
 	// FIXME: somehow sort the images (how? by hash??? :/)
-	i := 0
-	hashes.Range(func(_, value interface{}) bool {
-		i++
-		f := value.(*file)
-		t.Add(gwu.NewImage("", "/hash/"+f.hash), i, 0)
-		t.Add(gwu.NewLabel(f.hash), i, 1)
-		t.Add(gwu.NewLabel(f.filename), i, 2)
-		for j, b := range f.pinned {
-			c := gwu.NewCheckBox("")
-			t.Add(c, i, 3+j)
-			c.SetState(b)
-			// c.AddEHandler
-		}
-		return true // continue iterating
-	})
 
 	// Start a timer, to detect when new thumbnails are ready and show them
 	s := gwu.NewTimer(1 * time.Second)
@@ -303,6 +297,31 @@ func thumbnailImage(r io.Reader, maxw, maxh int) ([]byte, error) {
 			return nil, fmt.Errorf("encoding jpeg thumbnail: %w", err)
 		}
 		return buf.Bytes(), nil
+	}
+}
+
+func fetchThumbnail(fetched chan<- string, hashes sync.Map) {
+	log.Printf("%s - starting to fetch...", f.hash)
+	tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(f.hash))
+	if err != nil {
+		log.Printf("Could not get file with CID: %s", err)
+		return
+	}
+	log.Printf("%s - found", f.hash)
+	switch tree := tree.(type) {
+	case ifiles.File:
+		log.Printf("%s - is a file, thumbnailing", f.hash)
+		th, err := thumbnailImage(tree, 100, 100)
+		if err != nil {
+			log.Printf("Could not create thumbnail of %s: %s", f.hash, err)
+			return
+		}
+		f.contents = th
+		hashes.Store(f.hash, f)
+		log.Printf("%s - DONE", f.hash)
+		thumbnails <- f.hash
+	default:
+		log.Printf("%s - is not a file, ignoring", f.hash)
 	}
 }
 
