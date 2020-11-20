@@ -87,7 +87,7 @@ func main() {
 					log.Printf("Cannot fetch from %q: %s", p.name, err)
 					continue
 				}
-				// log.Printf("Fetched %v items from %q", len(cids), p.name)
+				log.Printf("Fetched %v items from %q", len(cids), p.name)
 				fetched := map[string]bool{}
 				for _, c := range cids {
 					fetched[c.Hash] = true
@@ -96,7 +96,9 @@ func main() {
 				p := p // capture loop var for use in closure
 				hashes.Range(func(_, value interface{}) bool {
 					f := value.(*file)
+					log.Printf("%q TEST %s fetched? %v", p.name, f.hash, fetched[f.hash])
 					if !fetched[f.hash] {
+						log.Printf("FETCH UNPIN %s @ %v %q", f.hash, p.i, p.name)
 						rowChanges <- rowChange{f, p.i, false}
 					}
 					return true // continue iterating
@@ -108,6 +110,7 @@ func main() {
 						filename: c.Name,
 						pinned:   make([]bool, len(pups)),
 					}
+					hashes.LoadOrStore(f.hash, f) // TODO: do we need this Map? seems unused elsewhere
 					rowChanges <- rowChange{f, p.i, true}
 				}
 			}
@@ -169,6 +172,7 @@ func main() {
 							c.SetEnabled(false) // read-only, showing current status in pup
 							r.statuses = append(r.statuses, c)
 
+							// FIXME: XXX for simplicity, change to 2 buttons
 							c = gwu.NewCheckBox("")
 							cell.Add(c)
 							p := p // capture the loop variable for use in closure
