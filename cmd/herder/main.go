@@ -115,7 +115,12 @@ func main() {
 	for _, p := range pups {
 		t.Add(gwu.NewLabel(p.name), 0, 3+p.i)
 	}
-	rows := make(chan file, 100)
+	type rowChange struct {
+		file         // basic data of the row (esp. in case it needs to be newly added)
+		ipup    int  // which pup's checkbox to change
+		checked bool // to what state should the pup's checkbox be changed
+	}
+	rowChanges := make(chan rowChange, 100)
 	{
 		// Every second, if there are new rows fetched, add them to the table
 		s := gwu.NewTimer(1 * time.Second)
@@ -251,7 +256,7 @@ func readConfig() config {
 }
 
 type file struct {
-	// thumbnail image.Image
+	// row      int
 	contents []byte
 	filename string
 	hash     string
