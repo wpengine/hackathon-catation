@@ -93,6 +93,7 @@ func main() {
 					fetched[c.Hash] = true
 				}
 				// Un-check all hashes not in fetched
+				p := p // capture loop var for use in closure
 				hashes.Range(func(_, value interface{}) bool {
 					f := value.(*file)
 					if !fetched[f.hash] {
