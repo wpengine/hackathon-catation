@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"github.com/icza/gowut/gwu"
+	ifiles "github.com/ipfs/go-ipfs-files"
+	icorepath "github.com/ipfs/interface-go-ipfs-core/path"
 	"golang.org/x/image/draw"
 
 	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
@@ -51,7 +53,6 @@ func main() {
 	}
 
 	// // Fetch thumbnails of hashes using cmd/downloader/
-	// thumbnails := make(chan string, 100)
 	// for _, c := range cids {
 	// 	f := &file{
 	// 		hash:     c.Hash,
@@ -158,6 +159,8 @@ func main() {
 		t.Add(gwu.NewLabel(p.name), 0, 3+p.i)
 	}
 	// Every second, if there are new rows fetched, add them to the table
+	thumbnailsByHash := sync.Map{}       // map[string][]byte
+	thumbnails := make(chan string, 100) // TODO: rename&refactor, e.g.: thumbnails fetched
 	{
 		s := gwu.NewTimer(1 * time.Second)
 		win.Add(s)
@@ -182,6 +185,7 @@ func main() {
 							r.statuses = append(r.statuses, c)
 						}
 						e.MarkDirty(t)
+						go fetchThumbnail(thumbnails, thumbnailsByHash, node, f.hash)
 					}
 
 					// Change the status of a checkbox
@@ -251,7 +255,7 @@ func readConfig() config {
 
 type file struct {
 	// row      int
-	contents []byte
+	// contents []byte
 	filename string
 	hash     string
 	pinned   []bool
@@ -300,28 +304,27 @@ func thumbnailImage(r io.Reader, maxw, maxh int) ([]byte, error) {
 	}
 }
 
-func fetchThumbnail(fetched chan<- string, hashes sync.Map) {
-	log.Printf("%s - starting to fetch...", f.hash)
-	tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(f.hash))
+func fetchThumbnail(fetched chan<- string, thumbnailsByHash sync.Map, node *ipfs.Node, hash string) {
+	log.Printf("%s - starting to fetch...", hash)
+	tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(hash))
 	if err != nil {
 		log.Printf("Could not get file with CID: %s", err)
 		return
 	}
-	log.Printf("%s - found", f.hash)
+	log.Printf("%s - found", hash)
 	switch tree := tree.(type) {
 	case ifiles.File:
-		log.Printf("%s - is a file, thumbnailing", f.hash)
+		log.Printf("%s - is a file, thumbnailing", hash)
 		th, err := thumbnailImage(tree, 100, 100)
 		if err != nil {
-			log.Printf("Could not create thumbnail of %s: %s", f.hash, err)
+			log.Printf("Could not create thumbnail of %s: %s", hash, err)
 			return
 		}
-		f.contents = th
-		hashes.Store(f.hash, f)
-		log.Printf("%s - DONE", f.hash)
-		thumbnails <- f.hash
+		thumbnailsByHash.Store(hash, th)
+		log.Printf("%s - DONE", hash)
+		fetched <- hash
 	default:
-		log.Printf("%s - is not a file, ignoring", f.hash)
+		log.Printf("%s - is not a file, ignoring", hash)
 	}
 }
 
