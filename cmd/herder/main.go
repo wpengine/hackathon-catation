@@ -124,7 +124,7 @@ func main() {
 	// Start building a table, each row will represent one file
 	rowsByHash := map[string]struct {
 		y        int
-		statuses []gwu.CheckBox
+		statuses []gwu.Panel
 	}{}
 	t := gwu.NewTable()
 	win.Add(t)
@@ -164,11 +164,12 @@ func main() {
 
 							cell := gwu.NewHorizontalPanel()
 							t.Add(cell, r.y, 3+p.i)
+							cell.SetCellPadding(5)
+							r.statuses = append(r.statuses, cell)
 
-							c := gwu.NewCheckBox("")
-							cell.Add(c)
-							c.SetEnabled(false) // read-only, showing current status in pup
-							r.statuses = append(r.statuses, c)
+							// c := gwu.NewCheckBox("")
+							// cell.Add(c)
+							// c.SetEnabled(false) // read-only, showing current status in pup
 
 							add := gwu.NewButton("📌")
 							cell.Add(add)
@@ -205,9 +206,14 @@ func main() {
 					}
 
 					// Change the status of a checkbox
-					r.statuses[f.ipup].SetState(f.checked)
+					if f.checked {
+						r.statuses[f.ipup].Style().SetBackground("#00ff00")
+					} else {
+						r.statuses[f.ipup].Style().SetBackground("#ffffff")
+					}
 					rowsByHash[f.hash] = r
-					e.MarkDirty(r.statuses[f.ipup])
+					// e.MarkDirty(r.statuses[f.ipup])
+					e.MarkDirty(t)
 
 				default:
 					return
