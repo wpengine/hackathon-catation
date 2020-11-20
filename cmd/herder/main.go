@@ -139,6 +139,7 @@ func main() {
 	// Create and build a window
 	win := gwu.NewWindow("main", "Herder test window")
 	win.Style().SetFullWidth()
+	win.Add(gwu.NewHTML(`<h1>Catation Forever!</h1>`))
 	// win.SetHAlign(gwu.HACenter)
 	// win.SetCellPadding(2)
 
