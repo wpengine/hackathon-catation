@@ -216,13 +216,14 @@ func main() {
 
 	// Serve thumbnails over HTTP for <img src="/hash/...">
 	http.Handle("/hash/", http.StripPrefix("/hash/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		v, ok := hashes.Load(r.URL.Path)
+		v, ok := thumbnailsByHash.Load(r.URL.Path)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		f := v.(*file)
-		http.ServeContent(w, r, f.filename, time.Time{}, bytes.NewReader(f.contents))
+		th := v.([]byte)
+		// TODO: if filename is somehow known, try using it instead of "" below
+		http.ServeContent(w, r, "", time.Time{}, bytes.NewReader(th))
 	})))
 
 	// Create and start a GUI server (omitting error check)
