@@ -45,8 +45,8 @@ and is certainly **not ready for production-like use**. ⚠️⚠️⚠️
         2020/11/18 11:02:36 pinned 2/2: images/cat-1.jpg
         2020/11/18 11:02:40 UPLOAD SUCCESSFUL! ---> /ipfs/QmXp2vE9rzPnUGucfB7zZ7pfa9uPYNjMTstmcuiFPBoYhz
         2020/11/18 11:02:40 Waiting for remaining images...
-        
-        
+
+
         >>>>>
         >>>>>     https://bit.ly/2K8R2Bd
         >>>>>

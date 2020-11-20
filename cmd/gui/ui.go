@@ -17,27 +17,29 @@ import (
 )
 
 type UI struct {
-	theme        *material.Theme
+	images []imageRow
+
+	// Widgets
 	imageList    *layout.List
 	uploadButton *widget.Clickable
-
-	images []imageRow
+	theme        *material.Theme
 }
 
 type imageRow struct {
 	path     string
 	contents image.Image
 
+	// Widgets
 	selected widget.Bool
 }
 
 func newUI() *UI {
 	return &UI{
-		theme: material.NewTheme(gofont.Collection()),
 		imageList: &layout.List{
 			Axis: layout.Vertical,
 		},
 		uploadButton: &widget.Clickable{},
+		theme:        material.NewTheme(gofont.Collection()),
 	}
 }
 
@@ -78,7 +80,7 @@ func (u *UI) renderImages(gtx layout.Context) layout.Dimensions {
 	l := u.imageList
 	return l.Layout(gtx, len(u.images), func(gtx layout.Context, i int) layout.Dimensions {
 		return layout.Flex{}.Layout(gtx,
-			layout.Rigid(widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout),
+			layout.Flexed(1, widget.Image{Src: paint.NewImageOp(u.images[i].contents)}.Layout),
 			layout.Rigid(material.CheckBox(u.theme, &u.images[i].selected, u.images[i].path).Layout),
 		)
 	})
