@@ -185,7 +185,7 @@ func main() {
 							r.statuses = append(r.statuses, c)
 						}
 						e.MarkDirty(t)
-						go fetchThumbnail(thumbnails, thumbnailsByHash, node, f.hash)
+						go fetchThumbnail(thumbnails, &thumbnailsByHash, node, f.hash)
 					}
 
 					// Change the status of a checkbox
@@ -306,7 +306,7 @@ func thumbnailImage(r io.Reader, maxw, maxh int) ([]byte, error) {
 	}
 }
 
-func fetchThumbnail(fetched chan<- string, thumbnailsByHash sync.Map, node *ipfs.Node, hash string) {
+func fetchThumbnail(fetched chan<- string, thumbnailsByHash *sync.Map, node *ipfs.Node, hash string) {
 	log.Printf("%s - starting to fetch...", hash)
 	tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(hash))
 	if err != nil {
