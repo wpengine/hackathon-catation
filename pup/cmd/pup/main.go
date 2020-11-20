@@ -11,6 +11,7 @@ import (
 	"github.com/peterbourgon/ff/v3"
 	"github.com/peterbourgon/ff/v3/ffcli"
 	"github.com/wpengine/hackathon-catation/pup"
+	"github.com/wpengine/hackathon-catation/pup/eternum"
 	"github.com/wpengine/hackathon-catation/pup/pinata"
 	"github.com/wpengine/hackathon-catation/pup/pipin"
 )
@@ -29,6 +30,9 @@ func main() {
 		pinataFlags  = flag.NewFlagSet("pup pinata", flag.ExitOnError)
 		pinataKey    = pinataFlags.String("api-key", "", "Pinata service API key")
 		pinataSecret = pinataFlags.String("secret-api-key", "", "Pinata service secret API key")
+
+		eternumFlags = flag.NewFlagSet("pup eternum", flag.ExitOnError)
+		eternumKey   = eternumFlags.String("api-key", "", "Eternum API key")
 	)
 
 	//////////////////////////////////////////////////////////
@@ -158,9 +162,74 @@ func main() {
 		Subcommands: []*ffcli.Command{pipinList, pipinAdd, pipinRm},
 	}
 
+	/////////////////////////////////////////////////////////
+	// Eternum
+
+	eternumList := &ffcli.Command{
+		Name:       "ls",
+		ShortUsage: "pup eternum ls",
+		Exec: func(ctx context.Context, args []string) error {
+			client := eternum.New(*eternumKey)
+			hashes, err := client.Fetch(ctx, []pup.Hash{})
+			if err != nil {
+				return err
+			}
+			fmt.Println("Pinned Hashes")
+			fmt.Println("-------------")
+			for _, hash := range hashes {
+				fmt.Println(hash.Hash)
+			}
+			return nil
+		},
+	}
+
+	eternumAdd := &ffcli.Command{
+		Name:       "add",
+		ShortUsage: "pup eternum add <hash>",
+		Exec: func(ctx context.Context, args []string) error {
+			if len(args) != 1 {
+				return errors.New("add requires one hash argument")
+			}
+			client := eternum.New(*eternumKey)
+			err := client.Pin(ctx, pup.Hash(args[0]))
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Pinned hash: %q\n", args[0])
+			return nil
+		},
+	}
+
+	eternumRm := &ffcli.Command{
+		Name:       "rm",
+		ShortUsage: "pup eternum rm <hash>",
+		Exec: func(ctx context.Context, args []string) error {
+			if len(args) != 1 {
+				return errors.New("rm requires one hash argument")
+			}
+			client := eternum.New(*eternumKey)
+			err := client.Unpin(ctx, pup.Hash(args[0]))
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Unpinned hash: %q\n", args[0])
+			return nil
+		},
+	}
+
+	eternumRoot := &ffcli.Command{
+		Name:        "eternum",
+		ShortUsage:  "pup eternum [flags] <command>",
+		FlagSet:     eternumFlags,
+		Options:     []ff.Option{ff.WithEnvVarPrefix("ETERNUM")},
+		Subcommands: []*ffcli.Command{eternumList, eternumAdd, eternumRm},
+	}
+
+	/////////////////////////////////////////////////////////
+
 	root := &ffcli.Command{
 		ShortUsage:  "pup [flags] <command>",
-		Subcommands: []*ffcli.Command{pipinRoot, pinataRoot},
+		Subcommands: []*ffcli.Command{pipinRoot, pinataRoot, eternumRoot},
 	}
 
 	if err := root.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
