@@ -13,22 +13,16 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-package pup
+package internal
 
-import "context"
+import "fmt"
 
-type Hash = string
+func PrintGPLBanner(program, releaseYear string) {
+	fmt.Printf(
+		`%s  Copyright (C) %s  WP Engine
+This program comes with ABSOLUTELY NO WARRANTY; for details, see https://www.gnu.org/licenses/gpl-3.0.txt.
+This is free software, and you are welcome to redistribute it
+under certain conditions; for details, see https://www.gnu.org/licenses/gpl-3.0.txt.
 
-type NamedHash struct {
-	Hash
-	Name string // optional; can be filename or path [?]
-	Size int64  // optional; in bytes [TODO: 0 or empty?]
-}
-
-type Pup interface {
-	// Fetch retrieves a list of pinned hashes. If filter is non-empty, the
-	// returned list will contain only hashes from the filter list.
-	Fetch(ctx context.Context, filter []Hash) ([]NamedHash, error)
-	Pin(ctx context.Context, hash Hash) error
-	Unpin(ctx context.Context, hash Hash) error
+`, program, releaseYear)
 }
