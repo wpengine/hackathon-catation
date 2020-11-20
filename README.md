@@ -1,5 +1,10 @@
 # Catation - an experiment in IPFS photo sharing
 
+**Catation** is an experimental app for easy sharing of photo albums with non-tech people, using IPFS.
+The pitch tagline is **"Dropbox for IPFS"**, or:
+"Easily share your cat & vacation photos with your family & friends!"
+(\* dog photos are encouraged as well)
+
 ![GUI screenshot](images/screenshot.01.png)
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
@@ -14,11 +19,6 @@ thus it may and does use various **horrible & amazing shortcuts**
 and is certainly **not ready for production-like use**. ⚠️⚠️⚠️
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-
-**Catation** is an experimental app for easy sharing of photo albums with non-tech people, using IPFS.
-The pitch tagline is "Dropbox for IPFS", or:
-"Easily share your cat & vacation photos with your family & friends!"
-(\* dog photos are encouraged as well)
 
 ## Running
 
