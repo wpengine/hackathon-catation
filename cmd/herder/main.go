@@ -166,6 +166,8 @@ func main() {
 		win.Add(s)
 		s.SetRepeat(true)
 		s.AddEHandlerFunc(func(e gwu.Event) {
+			// log.Println("TIMER(rowChanges) begin")
+			// defer log.Println("TIMER(rowChanges) end")
 			for i := 0; i < 100; i++ { // make sure we don't loop forever in event handler
 				select {
 				case f := <-rowChanges:
@@ -174,6 +176,7 @@ func main() {
 					// Do we need to add a new row?
 					if r.statuses == nil {
 						r.y = len(rowsByHash) + 1
+						log.Printf("new row: %v @ %v", f.hash, r.y)
 						t.Add(gwu.NewImage("", "/hash/"+f.hash), r.y, 0)
 						t.Add(gwu.NewLabel(f.hash), r.y, 1)
 						t.Add(gwu.NewLabel(f.filename), r.y, 2)
@@ -207,8 +210,11 @@ func main() {
 	win.Add(s)
 	s.SetRepeat(true)
 	s.AddEHandlerFunc(func(e gwu.Event) {
+		// log.Println("TIMER(thumbnails) begin")
+		// defer log.Println("TIMER(thumbnails) end")
 		select {
 		case h := <-thumbnails:
+			log.Printf("THUMB %s", h)
 			_ = h // TODO: only refresh specific thumbnail img
 			e.MarkDirty(t)
 		default:
@@ -218,6 +224,7 @@ func main() {
 	// Serve thumbnails over HTTP for <img src="/hash/...">
 	http.Handle("/hash/", http.StripPrefix("/hash/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v, ok := thumbnailsByHash.Load(r.URL.Path)
+		log.Printf("GET thumb=%q ok=%v", r.URL.Path, ok)
 		if !ok {
 			w.WriteHeader(http.StatusNotFound)
 			return
