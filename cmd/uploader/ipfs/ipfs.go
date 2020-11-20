@@ -32,7 +32,7 @@ import (
 	coreiface "github.com/ipfs/interface-go-ipfs-core"
 	ipfspath "github.com/ipfs/interface-go-ipfs-core/path"
 	p2pcrypto "github.com/libp2p/go-libp2p-core/crypto"
-	peer "github.com/libp2p/go-libp2p-peer"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 )
 
 type Node struct {
