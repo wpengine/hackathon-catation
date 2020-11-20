@@ -42,18 +42,7 @@ func main() {
 		Name:       "ls",
 		ShortUsage: "pup pinata ls",
 		Exec: func(ctx context.Context, args []string) error {
-			client := pinata.New(*pinataKey, *pinataSecret)
-			client.Fetch(ctx, []pup.Hash{})
-			hashes, err := client.Fetch(ctx, []pup.Hash{})
-			if err != nil {
-				return err
-			}
-			fmt.Println("Pinned Hashes")
-			fmt.Println("-------------")
-			for _, hash := range hashes {
-				fmt.Println(hash.Hash)
-			}
-			return nil
+			return ls(ctx, pinata.New(*pinataKey, *pinataSecret))
 		},
 	}
 
@@ -61,16 +50,7 @@ func main() {
 		Name:       "add",
 		ShortUsage: "pup pinata add <hash>",
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return errors.New("add requires one hash argument")
-			}
-			client := pinata.New(*pinataKey, *pinataSecret)
-			err := client.Pin(ctx, pup.Hash(args[0]))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Pinned hash: %q\n", args[0])
-			return nil
+			return add(ctx, pinata.New(*pinataKey, *pinataSecret), args)
 		},
 	}
 
@@ -78,16 +58,7 @@ func main() {
 		Name:       "rm",
 		ShortUsage: "pup pinata rm <hash>",
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return errors.New("rm requires one hash argument")
-			}
-			client := pinata.New(*pinataKey, *pinataSecret)
-			err := client.Unpin(ctx, pup.Hash(args[0]))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Unpinned hash: %q\n", args[0])
-			return nil
+			return rm(ctx, pinata.New(*pinataKey, *pinataSecret), args)
 		},
 	}
 
@@ -106,17 +77,7 @@ func main() {
 		Name:       "ls",
 		ShortUsage: "pup pipin ls",
 		Exec: func(ctx context.Context, args []string) error {
-			client := pipin.New(true, *pipinHost, *pipinToken)
-			hashes, err := client.Fetch(ctx, []pup.Hash{})
-			if err != nil {
-				return err
-			}
-			fmt.Println("Pinned Hashes")
-			fmt.Println("-------------")
-			for _, hash := range hashes {
-				fmt.Println(hash.Hash)
-			}
-			return nil
+			return ls(ctx, pipin.New(true, *pipinHost, *pipinToken))
 		},
 	}
 
@@ -124,16 +85,7 @@ func main() {
 		Name:       "add",
 		ShortUsage: "pup pipin add <hash>",
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return errors.New("add requires one hash argument")
-			}
-			client := pipin.New(true, *pipinHost, *pipinToken)
-			err := client.Pin(ctx, pup.Hash(args[0]))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Pinned hash: %q\n", args[0])
-			return nil
+			return add(ctx, pipin.New(true, *pipinHost, *pipinToken), args)
 		},
 	}
 
@@ -141,16 +93,7 @@ func main() {
 		Name:       "rm",
 		ShortUsage: "pup pipin rm <hash>",
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return errors.New("rm requires one hash argument")
-			}
-			client := pipin.New(true, *pipinHost, *pipinToken)
-			err := client.Unpin(ctx, pup.Hash(args[0]))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Unpinned hash: %q\n", args[0])
-			return nil
+			return rm(ctx, pipin.New(true, *pipinHost, *pipinToken), args)
 		},
 	}
 
@@ -169,17 +112,7 @@ func main() {
 		Name:       "ls",
 		ShortUsage: "pup eternum ls",
 		Exec: func(ctx context.Context, args []string) error {
-			client := eternum.New(*eternumKey)
-			hashes, err := client.Fetch(ctx, []pup.Hash{})
-			if err != nil {
-				return err
-			}
-			fmt.Println("Pinned Hashes")
-			fmt.Println("-------------")
-			for _, hash := range hashes {
-				fmt.Println(hash.Hash)
-			}
-			return nil
+			return ls(ctx, eternum.New(*eternumKey))
 		},
 	}
 
@@ -187,16 +120,7 @@ func main() {
 		Name:       "add",
 		ShortUsage: "pup eternum add <hash>",
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return errors.New("add requires one hash argument")
-			}
-			client := eternum.New(*eternumKey)
-			err := client.Pin(ctx, pup.Hash(args[0]))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Pinned hash: %q\n", args[0])
-			return nil
+			return add(ctx, eternum.New(*eternumKey), args)
 		},
 	}
 
@@ -204,16 +128,7 @@ func main() {
 		Name:       "rm",
 		ShortUsage: "pup eternum rm <hash>",
 		Exec: func(ctx context.Context, args []string) error {
-			if len(args) != 1 {
-				return errors.New("rm requires one hash argument")
-			}
-			client := eternum.New(*eternumKey)
-			err := client.Unpin(ctx, pup.Hash(args[0]))
-			if err != nil {
-				return err
-			}
-			fmt.Printf("Unpinned hash: %q\n", args[0])
-			return nil
+			return rm(ctx, eternum.New(*eternumKey), args)
 		},
 	}
 
@@ -235,4 +150,39 @@ func main() {
 	if err := root.ParseAndRun(context.Background(), os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func ls(ctx context.Context, client pup.Pup) error {
+	hashes, err := client.Fetch(ctx, []pup.Hash{})
+	if err != nil {
+		return err
+	}
+	fmt.Println("Pinned Hashes")
+	fmt.Println("----------------------------------------------")
+	for _, hash := range hashes {
+		fmt.Println(hash.Hash)
+	}
+	return nil
+}
+
+func add(ctx context.Context, client pup.Pup, args []string) error {
+	if len(args) != 1 {
+		return errors.New("add requires one hash argument")
+	}
+	if err := client.Pin(ctx, pup.Hash(args[0])); err != nil {
+		return err
+	}
+	fmt.Printf("Pinned hash: %q\n", args[0])
+	return nil
+}
+
+func rm(ctx context.Context, client pup.Pup, args []string) error {
+	if len(args) != 1 {
+		return errors.New("rm requires one hash argument")
+	}
+	if err := client.Unpin(ctx, pup.Hash(args[0])); err != nil {
+		return err
+	}
+	fmt.Printf("Unpinned hash: %q\n", args[0])
+	return nil
 }
