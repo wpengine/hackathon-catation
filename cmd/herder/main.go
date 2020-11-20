@@ -67,7 +67,6 @@ func main() {
 	//
 	// rowChange is a message describing how the GUI should toggle a checkbox
 	// for a particular file's row
-	hashes := sync.Map{} // map[string]*file
 	type rowChange struct {
 		*file        // basic data of the row (esp. in case it needs to be newly added)
 		ipup    int  // which pup's checkbox to change
@@ -75,6 +74,7 @@ func main() {
 	}
 	rowChanges := make(chan rowChange, 100)
 	go func() {
+		hashes := map[string]*file{}
 		// Infinite loop, iterating over all pups
 		for {
 			for _, p := range pups {
@@ -93,16 +93,13 @@ func main() {
 					fetched[c.Hash] = true
 				}
 				// Un-check all hashes not in fetched
-				p := p // capture loop var for use in closure
-				hashes.Range(func(_, value interface{}) bool {
-					f := value.(*file)
-					log.Printf("%q TEST %s fetched? %v", p.name, f.hash, fetched[f.hash])
+				for _, f := range hashes {
+					// log.Printf("%q TEST %s fetched? %v", p.name, f.hash, fetched[f.hash])
 					if !fetched[f.hash] {
-						log.Printf("FETCH UNPIN %s @ %v %q", f.hash, p.i, p.name)
+						// log.Printf("FETCH UNPIN %s @ %v %q", f.hash, p.i, p.name)
 						rowChanges <- rowChange{f, p.i, false}
 					}
-					return true // continue iterating
-				})
+				}
 				// Add missing hashes
 				for _, c := range cids {
 					f := &file{
@@ -110,7 +107,7 @@ func main() {
 						filename: c.Name,
 						pinned:   make([]bool, len(pups)),
 					}
-					hashes.LoadOrStore(f.hash, f) // TODO: do we need this Map? seems unused elsewhere
+					hashes[f.hash] = f // TODO: do we need this Map? seems unused elsewhere
 					rowChanges <- rowChange{f, p.i, true}
 				}
 			}
