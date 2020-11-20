@@ -69,11 +69,11 @@ func main() {
 		pup.Pup
 	}
 	pups := []pupColumn{}
-	if cfg.Pinata != nil {
-		pups = append(pups, pupColumn{len(pups), "pinata", cfg.Pinata})
-	}
 	if cfg.Pipin != nil {
 		pups = append(pups, pupColumn{len(pups), "pipin", cfg.Pipin})
+	}
+	if cfg.Pinata != nil {
+		pups = append(pups, pupColumn{len(pups), "pinata", cfg.Pinata})
 	}
 	if cfg.Eternum != nil {
 		pups = append(pups, pupColumn{len(pups), "eternum", cfg.Eternum})
