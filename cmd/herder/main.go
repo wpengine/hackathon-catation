@@ -87,7 +87,7 @@ func main() {
 					log.Printf("Cannot fetch from %q: %s", p.name, err)
 					continue
 				}
-				log.Printf("Fetched %v items from %q", len(cids), p.name)
+				// log.Printf("Fetched %v items from %q", len(cids), p.name)
 				fetched := map[string]bool{}
 				for _, c := range cids {
 					fetched[c.Hash] = true
@@ -124,7 +124,7 @@ func main() {
 	rowsByHash := map[string]struct {
 		y        int
 		statuses []gwu.CheckBox
-		specs    []gwu.CheckBox // wanted status
+		specs    []gwu.CheckBox // wanted/desired status
 	}{}
 	t := gwu.NewTable()
 	win.Add(t)
@@ -164,12 +164,39 @@ func main() {
 							t.Add(cell, r.y, 3+p.i)
 
 							c := gwu.NewCheckBox("")
-							c.SetEnabled(false) // read-only, showing current status in pup
 							cell.Add(c)
+							c.SetEnabled(false) // read-only, showing current status in pup
 							r.statuses = append(r.statuses, c)
 
 							c = gwu.NewCheckBox("")
 							cell.Add(c)
+							p := p // capture the loop variable for use in closure
+							c.AddEHandlerFunc(func(e gwu.Event) {
+								v := c.State()
+								// fmt.Println("v", v)
+								ctx, release := context.WithTimeout(context.Background(), 2*time.Second)
+								defer release()
+								defer e.MarkDirty(c)
+								// TODO: make it more async & faster
+								log.Printf("--- check %s / %q = %v ---", f.hash, p.name, v)
+								if v {
+									err := p.Pup.Pin(ctx, f.hash)
+									if err != nil {
+										log.Printf("%s.Pin error: %s", p.name, err)
+										c.SetState(false)
+										return
+									}
+									log.Printf("%s.Pin success", p.name)
+								} else {
+									err := p.Pup.Unpin(ctx, f.hash)
+									if err != nil {
+										log.Printf("%s.Unpin error: %s", p.name, err)
+										c.SetState(true)
+										return
+									}
+									log.Printf("%s.Unpin success", p.name)
+								}
+							}, gwu.ETypeClick)
 							r.specs = append(r.specs, c)
 						}
 						e.MarkDirty(t)
@@ -178,6 +205,7 @@ func main() {
 
 					// Change the status of a checkbox
 					r.statuses[f.ipup].SetState(f.checked)
+					// r.specs[f.ipup].SetState(f.checked) // TODO: race possibility
 					rowsByHash[f.hash] = r
 					e.MarkDirty(r.statuses[f.ipup])
 
