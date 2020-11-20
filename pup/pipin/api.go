@@ -11,28 +11,28 @@ import (
 )
 
 type Client struct {
-	useTLS bool
-	host   string
-	token  string
+	UseTLS bool
+	Host   string // TODO(akavel): replace this + above with BaseURL ?
+	Token  string
 }
 
 func New(useTLS bool, host, token string) *Client {
 	return &Client{
-		useTLS: useTLS,
-		host:   host,
-		token:  token,
+		UseTLS: useTLS,
+		Host:   host,
+		Token:  token,
 	}
 }
 
 func (c *Client) endpoint(path string, args ...interface{}) *url.URL {
 	scheme := "http"
-	if c.useTLS {
+	if c.UseTLS {
 		scheme = "https"
 	}
 
 	return &url.URL{
 		Scheme: scheme,
-		Host:   c.host,
+		Host:   c.Host,
 		Path:   fmt.Sprintf(path, args...),
 	}
 }
@@ -48,7 +48,7 @@ func (c *Client) Fetch(ctx context.Context, filter []pup.Hash) ([]pup.NamedHash,
 		return nil, err
 	}
 
-	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", c.token))
+	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", c.Token))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (c *Client) Pin(ctx context.Context, hash pup.Hash) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", c.token))
+	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", c.Token))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -125,7 +125,7 @@ func (c *Client) Unpin(ctx context.Context, hash pup.Hash) error {
 	if err != nil {
 		return err
 	}
-	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", c.token))
+	req.Header.Add("authorization", fmt.Sprintf("Bearer %s", c.Token))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {

@@ -24,10 +24,12 @@ import (
 	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
 	"github.com/wpengine/hackathon-catation/pup"
 	"github.com/wpengine/hackathon-catation/pup/pinata"
+	"github.com/wpengine/hackathon-catation/pup/pipin"
 )
 
 type config struct {
 	Pinata *pinata.API
+	Pipin  *pipin.Client
 }
 
 func main() {
@@ -50,6 +52,9 @@ func main() {
 	pups := []pupColumn{}
 	if cfg.Pinata != nil {
 		pups = append(pups, pupColumn{len(pups), "pinata", cfg.Pinata})
+	}
+	if cfg.Pipin != nil {
+		pups = append(pups, pupColumn{len(pups), "pipin", cfg.Pipin})
 	}
 
 	// In a background loop, start fetching hashes from pups, to be fed into
@@ -77,6 +82,7 @@ func main() {
 					log.Printf("Cannot fetch from %q: %s", p.name, err)
 					continue
 				}
+				log.Printf("Fetched %v items from %q", len(cids), p.name)
 				fetched := map[string]bool{}
 				for _, c := range cids {
 					fetched[c.Hash] = true
@@ -215,7 +221,8 @@ func readConfig() config {
 		fmt.Fprintln(os.Stderr, "error: cannot read config.json:", err)
 		fmt.Fprintln(os.Stderr, "HINT: example config.json:")
 		v, _ := json.MarshalIndent(config{
-			Pinata: &pinata.API{Key: "", Secret: ""},
+			Pinata: &pinata.API{},
+			Pipin:  &pipin.Client{},
 		}, "", "  ")
 		fmt.Fprintln(os.Stderr, string(v))
 		os.Exit(1)
