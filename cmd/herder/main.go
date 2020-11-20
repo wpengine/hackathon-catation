@@ -124,6 +124,7 @@ func main() {
 	rowsByHash := map[string]struct {
 		y        int
 		statuses []gwu.CheckBox
+		specs    []gwu.CheckBox // wanted status
 	}{}
 	t := gwu.NewTable()
 	win.Add(t)
@@ -159,11 +160,17 @@ func main() {
 						t.Add(gwu.NewLabel(f.hash), r.y, 1)
 						t.Add(gwu.NewLabel(f.filename), r.y, 2)
 						for _, p := range pups {
-							// TODO: add clickable checkbox above, to allow changing the state
+							cell := gwu.NewHorizontalPanel()
+							t.Add(cell, r.y, 3+p.i)
+
 							c := gwu.NewCheckBox("")
 							c.SetEnabled(false) // read-only, showing current status in pup
-							t.Add(c, r.y, 3+p.i)
+							cell.Add(c)
 							r.statuses = append(r.statuses, c)
+
+							c = gwu.NewCheckBox("")
+							cell.Add(c)
+							r.specs = append(r.specs, c)
 						}
 						e.MarkDirty(t)
 						go fetchThumbnail(thumbnails, &thumbnailsByHash, node, f.hash)
