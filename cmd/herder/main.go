@@ -52,43 +52,6 @@ func main() {
 		pups = append(pups, pupColumn{len(pups), "pinata", cfg.Pinata})
 	}
 
-	// // Fetch thumbnails of hashes using cmd/downloader/
-	// for _, c := range cids {
-	// 	f := &file{
-	// 		hash:     c.Hash,
-	// 		filename: c.Name,
-	// 	}
-	// 	_, loaded := hashes.LoadOrStore(c.Hash, f)
-	// 	if loaded {
-	// 		continue
-	// 	}
-	// 	// new file - start fetching it in background
-	// 	go func() {
-	// 		log.Printf("%s - starting to fetch...", f.hash)
-	// 		tree, err := node.API.Unixfs().Get(context.Background(), icorepath.New(f.hash))
-	// 		if err != nil {
-	// 			log.Printf("Could not get file with CID: %s", err)
-	// 			return
-	// 		}
-	// 		log.Printf("%s - found", f.hash)
-	// 		switch tree := tree.(type) {
-	// 		case ifiles.File:
-	// 			log.Printf("%s - is a file, thumbnailing", f.hash)
-	// 			th, err := thumbnailImage(tree, 100, 100)
-	// 			if err != nil {
-	// 				log.Printf("Could not create thumbnail of %s: %s", f.hash, err)
-	// 				return
-	// 			}
-	// 			f.contents = th
-	// 			hashes.Store(f.hash, f)
-	// 			log.Printf("%s - DONE", f.hash)
-	// 			thumbnails <- f.hash
-	// 		default:
-	// 			log.Printf("%s - is not a file, ignoring", f.hash)
-	// 		}
-	// 	}()
-	// }
-
 	// In a background loop, start fetching hashes from pups, to be fed into
 	// the GUI table.
 	//
