@@ -166,7 +166,7 @@ func main() {
 		win.Add(s)
 		s.SetRepeat(true)
 		s.AddEHandlerFunc(func(e gwu.Event) {
-			for {
+			for i := 0; i < 100; i++ { // make sure we don't loop forever in event handler
 				select {
 				case f := <-rowChanges:
 					r := rowsByHash[f.hash]
