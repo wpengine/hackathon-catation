@@ -35,6 +35,23 @@ type config struct {
 }
 
 func main() {
+	trigger := make(chan struct{}, 1)
+	trigger <- struct{}{}
+	TRIGGER := func() {
+		select {
+		case trigger <- struct{}{}:
+		default:
+		}
+	}
+	{
+		tick := time.NewTicker(60 * time.Second)
+		go func() {
+			for range tick.C {
+				TRIGGER()
+			}
+		}()
+	}
+
 	// Read config file
 	cfg := readConfig()
 
@@ -77,41 +94,45 @@ func main() {
 		hashes := map[string]*file{}
 		// Infinite loop, iterating over all pups
 		for {
-			for _, p := range pups {
-				ctx := context.Background()
-				ctx, release := context.WithTimeout(ctx, 10*time.Second)
-				// TODO: protect against panic
-				cids, err := p.Fetch(ctx, nil)
-				release()
-				if err != nil {
-					log.Printf("Cannot fetch from %q: %s", p.name, err)
-					continue
-				}
-				log.Printf("Fetched %v items from %q", len(cids), p.name)
-				fetched := map[string]bool{}
-				for _, c := range cids {
-					fetched[c.Hash] = true
-				}
-				// Un-check all hashes not in fetched
-				for _, f := range hashes {
-					// log.Printf("%q TEST %s fetched? %v", p.name, f.hash, fetched[f.hash])
-					if !fetched[f.hash] {
-						// log.Printf("FETCH UNPIN %s @ %v %q", f.hash, p.i, p.name)
-						rowChanges <- rowChange{f, p.i, false}
+			<-trigger
+			for ii := 0; ii < 2; ii++ {
+				for _, p := range pups {
+					ctx := context.Background()
+					ctx, release := context.WithTimeout(ctx, 10*time.Second)
+					// TODO: protect against panic
+					cids, err := p.Fetch(ctx, nil)
+					release()
+					if err != nil {
+						log.Printf("Cannot fetch from %q: %s", p.name, err)
+						continue
+					}
+					log.Printf("Fetched %v items from %q", len(cids), p.name)
+					fetched := map[string]bool{}
+					for _, c := range cids {
+						fetched[c.Hash] = true
+					}
+					// Un-check all hashes not in fetched
+					for _, f := range hashes {
+						// log.Printf("%q TEST %s fetched? %v", p.name, f.hash, fetched[f.hash])
+						if !fetched[f.hash] {
+							// log.Printf("FETCH UNPIN %s @ %v %q", f.hash, p.i, p.name)
+							rowChanges <- rowChange{f, p.i, false}
+						}
+					}
+					// Add missing hashes
+					for _, c := range cids {
+						f := &file{
+							hash:     c.Hash,
+							filename: c.Name,
+							pinned:   make([]bool, len(pups)),
+						}
+						hashes[f.hash] = f // TODO: do we need this Map? seems unused elsewhere
+						rowChanges <- rowChange{f, p.i, true}
 					}
 				}
-				// Add missing hashes
-				for _, c := range cids {
-					f := &file{
-						hash:     c.Hash,
-						filename: c.Name,
-						pinned:   make([]bool, len(pups)),
-					}
-					hashes[f.hash] = f // TODO: do we need this Map? seems unused elsewhere
-					rowChanges <- rowChange{f, p.i, true}
-				}
+				// time.Sleep(1 * time.Second)
+				time.Sleep(2 * time.Second)
 			}
-			time.Sleep(1 * time.Second)
 		}
 	}()
 
@@ -184,6 +205,7 @@ func main() {
 									return
 								}
 								log.Printf("%s.Pin success", p.name)
+								TRIGGER()
 							}, gwu.ETypeClick)
 
 							rm := gwu.NewButton("🗑")
@@ -199,6 +221,7 @@ func main() {
 									return
 								}
 								log.Printf("%s.Unpin success", p.name)
+								TRIGGER()
 							}, gwu.ETypeClick)
 						}
 						e.MarkDirty(t)
