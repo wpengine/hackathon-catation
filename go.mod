@@ -14,6 +14,8 @@ require (
 	github.com/ipfs/interface-go-ipfs-core v0.3.0
 	github.com/libp2p/go-libp2p-core v0.5.7
 	github.com/libp2p/go-libp2p-peer v0.2.0
+	github.com/peterbourgon/ff v1.7.0
+	github.com/peterbourgon/ff/v3 v3.0.0
 	golang.org/x/image v0.0.0-20200618115811-c13761719519
 	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
 )

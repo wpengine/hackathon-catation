@@ -1,10 +1,11 @@
 package pinata
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/wpengine/hackathon-catation/pup"
 )
@@ -16,11 +17,19 @@ type API struct {
 	Key, Secret string
 }
 
-func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
+func New(key, secret string) *API {
+	return &API{Key: key, Secret: secret}
+}
+
+func (api *API) Fetch(ctx context.Context, filter []pup.Hash) ([]pup.NamedHash, error) {
 	// TODO: use some metadata, otherwise this func is very ineffective and currently limited to 1000 pins (TODO: first, check if they didn't publish some newer API)
 
-	req, err := http.NewRequest(http.MethodGet,
-		"https://api.pinata.cloud/data/pinList?status=pinned", nil)
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodGet,
+		"https://api.pinata.cloud/data/pinList?status=pinned",
+		nil,
+	)
 	if err != nil {
 		// Logic bug, should never happen
 		panic(fmt.Errorf("pinata: building fetch request: %w", err))
@@ -30,9 +39,7 @@ func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
 	req.Header.Add("pinata_secret_api_key", api.Secret)
 
 	// execute the request
-	// TODO: [LATER] configurable timeout - or rather, pass Context as Fetch argument
-	c := &http.Client{Timeout: 10 * time.Second}
-	resp, err := c.Do(req)
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("pinata: fetching: %w", err)
 	}
@@ -78,7 +85,6 @@ func (api *API) Fetch(filter []pup.Hash) ([]pup.NamedHash, error) {
 	return list, nil
 }
 
-/*
 func (api *API) Pin(ctx context.Context, hash pup.Hash) error {
 	payload, err := json.Marshal(map[string]string{
 		"hashToPin": hash,
@@ -106,37 +112,41 @@ func (api *API) Pin(ctx context.Context, hash pup.Hash) error {
 	if err != nil {
 		return fmt.Errorf("pinata: adding hash %q: %w", hash, err)
 	}
-	defer resp.Body.Close()
 
-	// FIXME: if response is failed because e.g. missing API keys, return meaningful error instead of empty + nil
-
-	// parse response
-	var r PinResponse
-	if err := json.NewDecoder(resp.Body).Decode(&r); err != nil {
-		return fmt.Errorf("pinata: adding hash %q: decoding response: %w", hash, err)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("pinata: pin call returned HTTP code %d", resp.StatusCode)
 	}
 
-	// Wait until verified successful pin
-	var done bool
-
-	for done == false {
-		done, err := api.isPinned(ctx, hash)
-		if err != nil {
-			return fmt.Errorf("error checking pin status: %v", err)
-		}
-		select {
-		case done == true:
-			return nil
-		case <-ctx.Done():
-			return fmt.Error("context cancelled")
-		case time.After(time.Second):
-			continue
-		}
-	}
-
-	return &r, nil
+	return nil
 }
 
+func (api *API) Unpin(ctx context.Context, hash pup.Hash) error {
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodDelete,
+		fmt.Sprintf("https://api.pinata.cloud/pinning/unpin/%s", hash),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("pinata: removing hash %q: %w", hash, err)
+	}
+
+	req.Header.Add("pinata_api_key", api.Key)
+	req.Header.Add("pinata_secret_api_key", api.Secret)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("pinata: removing hash %q: %w", hash, err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("pinata: unpin call returned HTTP code %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+/*
 func (api *API) isPinned(ctx context.Context, hash string) (bool, error) {
 	// TODO: use some metadata, otherwise this is very ineffective and currently limited to 1000 pins
 

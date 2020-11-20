@@ -105,7 +105,11 @@ func main() {
 		// Infinite loop, iterating over all pups
 		for {
 			for _, p := range pups {
-				cids, err := p.Fetch(nil)
+				ctx := context.Background()
+				ctx, release := context.WithTimeout(ctx, 10*time.Second)
+				// TODO: protect against panic
+				cids, err := p.Fetch(ctx, nil)
+				release()
 				if err != nil {
 					log.Printf("Cannot fetch from %q: %s", p.name, err)
 					continue
