@@ -23,13 +23,15 @@ import (
 
 	"github.com/wpengine/hackathon-catation/cmd/uploader/ipfs"
 	"github.com/wpengine/hackathon-catation/pup"
+	"github.com/wpengine/hackathon-catation/pup/eternum"
 	"github.com/wpengine/hackathon-catation/pup/pinata"
 	"github.com/wpengine/hackathon-catation/pup/pipin"
 )
 
 type config struct {
-	Pinata *pinata.API
-	Pipin  *pipin.Client
+	Pinata  *pinata.API
+	Pipin   *pipin.Client
+	Eternum *eternum.Client
 }
 
 func main() {
@@ -55,6 +57,9 @@ func main() {
 	}
 	if cfg.Pipin != nil {
 		pups = append(pups, pupColumn{len(pups), "pipin", cfg.Pipin})
+	}
+	if cfg.Eternum != nil {
+		pups = append(pups, pupColumn{len(pups), "eternum", cfg.Eternum})
 	}
 
 	// In a background loop, start fetching hashes from pups, to be fed into
@@ -219,10 +224,11 @@ func readConfig() config {
 	raw, err := ioutil.ReadFile("config.json")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "error: cannot read config.json:", err)
-		fmt.Fprintln(os.Stderr, "HINT: example config.json:")
+		fmt.Fprintln(os.Stderr, "HINT: example config.json (not all entries are required!):")
 		v, _ := json.MarshalIndent(config{
-			Pinata: &pinata.API{},
-			Pipin:  &pipin.Client{},
+			Pinata:  &pinata.API{},
+			Pipin:   &pipin.Client{},
+			Eternum: &eternum.Client{},
 		}, "", "  ")
 		fmt.Fprintln(os.Stderr, string(v))
 		os.Exit(1)

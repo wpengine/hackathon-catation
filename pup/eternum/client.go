@@ -11,11 +11,11 @@ import (
 )
 
 type Client struct {
-	key string
+	Key string
 }
 
 func New(key string) *Client {
-	return &Client{key: key}
+	return &Client{Key: key}
 }
 
 func (c *Client) Fetch(ctx context.Context, filter []pup.Hash) ([]pup.NamedHash, error) {
@@ -26,7 +26,7 @@ func (c *Client) Fetch(ctx context.Context, filter []pup.Hash) ([]pup.NamedHash,
 		nil,
 	)
 	req.Header.Set("content-type", "application/json")
-	req.Header.Set("authorization", fmt.Sprintf("Token %s", c.key))
+	req.Header.Set("authorization", fmt.Sprintf("Token %s", c.Key))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -101,7 +101,7 @@ func (c *Client) Pin(ctx context.Context, hash pup.Hash) error {
 		&buf,
 	)
 	req.Header.Set("content-type", "application/json")
-	req.Header.Set("authorization", fmt.Sprintf("Token %s", c.key))
+	req.Header.Set("authorization", fmt.Sprintf("Token %s", c.Key))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -148,7 +148,7 @@ func (c *Client) Unpin(ctx context.Context, hash pup.Hash) error {
 		nil,
 	)
 	req.Header.Set("content-type", "application/json")
-	req.Header.Set("authorization", fmt.Sprintf("Token %s", c.key))
+	req.Header.Set("authorization", fmt.Sprintf("Token %s", c.Key))
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
