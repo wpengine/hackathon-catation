@@ -190,6 +190,7 @@ func main() {
 
 					// Change the status of a checkbox
 					r.statuses[f.ipup].SetState(f.checked)
+					rowsByHash[f.hash] = r
 					e.MarkDirty(r.statuses[f.ipup])
 
 				default:
