@@ -1,26 +1,32 @@
-# Catation - an experiment in IPFS photo sharing
+# Catation & Catation Forever - experiments in IPFS photo sharing
 
 **Catation** is an experimental app for easy sharing of photo albums with non-tech people, using IPFS.
 The pitch tagline is **"Dropbox for IPFS"**, or:
 "Easily share your cat & vacation photos with your family & friends!"
 (\* dog photos are encouraged as well)
 
-![GUI screenshot](images/screenshot.01.png)
+![Catation GUI screenshot](images/screenshot.01.png)
+
+**Catation Forever: Herder** is an experimental app complementing **Catation**.
+It provides a way to easily replicate (copy) or move your photos between
+various IPFS pinning (i.e. data persistence) services.
+
+![Herder GUI screenshot](images/herder.png)
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
-**⚠️⚠️⚠️ IMPORTANT NOTE: ⚠️⚠️⚠️** Catation is a one-off experiment built over a hackathon at WPEngine,
+**⚠️⚠️⚠️ IMPORTANT NOTE: ⚠️⚠️⚠️** Catation & Catation Forever are one-off experiments built over a hackathon at WPEngine,
 with explicitly **no official plans for maintenance or support from WPEngine**.
-The project is released for free under GPL as an act of gratitude towards the FLOSS community.
+The projects are released for free under GPLv3+ as an act of gratitude towards the FLOSS community.
 You are more than welcome to fork it & develop further on your own,
-as long as you adhere to the GPL license terms.
-The project **is a quick & dirty prototype**,
-thus it may and does use various **horrible & amazing shortcuts**
-and is certainly **not ready for production-like use**. ⚠️⚠️⚠️
+as long as you adhere to the GPLv3+ license terms.
+The projects **are quick & dirty prototypes**,
+thus they may and does use various **horrible & amazing shortcuts**
+and are certainly **not ready for production-like use**. ⚠️⚠️⚠️
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
-## Running
+## Running Catation
 
  1. Go to https://pinata.cloud, create an account and copy your new "API key" and "Secret API key" into environment variables:
 
@@ -31,9 +37,11 @@ and is certainly **not ready for production-like use**. ⚠️⚠️⚠️
 
         $ export BITLY_API_KEY=...
 
- 3. Start Catation GUI:
+ 3. Start Catation GUI or CLI:
 
-        $ go run ./cmd/gui
+        $ go run ./cmd/gui   # alternative: GUI
+        or:
+        $ go run ./cmd/uploader image1.jpg image2.png   # alternative: CLI
 
  4. Scroll down and select checkboxes for the photos you want to share.
  5. Click **[Upload]** button.
@@ -53,27 +61,39 @@ and is certainly **not ready for production-like use**. ⚠️⚠️⚠️
 
  7. Copy this link and share the album with your friends and family!
 
-## Internal architecture details
+## Running Catation Forever: Herder
 
-The main technical idea & workflow of the app is:
- 1. You pick a set of photos using a (cross-platform) GUI interface ([`./cmd/gui`](./cmd/gui))
-    - The gui app wraps all the following steps, you don't need to run them manually - they're listed just to explain the architecture & data flow.
- 2. The app creates a simple HTML "album" of the images ([`./cmd/builder`](./cmd/builder))
- 3. The photos & the album are uploaded to local in-memory IPFS node ([`./cmd/uploader`](./cmd/uploader))
- 4. The photos & the album are pinned using a freemium Pinata service ([`./cmd/pinner`](./cmd/pinner))
-    - This makes the photos available for download even when you close your computer/laptop.
-    - **NOTE:** This currently requires passing a Pinata token through environment variables: `PINATA_API_KEY` and `PINATA_SECRET_API_KEY`
-    - TODO: Also support pinning using a Raspberry Pi you own, and/or pinning services other than Pinata.
-    - TODO: Allow setting the tokens via GUI & somehow make it easier & more user-friendly
-    - TODO: Give the user some way of deleting old photos from the pinning service?
- 5. A link to the album at the public IPFS gateway is shortened using a free URL-shortening service bit.ly ([`./cmd/shortener`](./cmd/shortener))
-    - This results in a short, publicly browsable link to the album, for easy sharing with non-techie friends & family, e.g. over a text message.
-    - **NOTE:** This currently requires passing a bit.ly token through environment variable: `BITLY_API_KEY`
-    - TODO: Also support pinning using URL-shortening services other than bit.ly.
-    - TODO: Allow setting the token via GUI & somehow make it easier & more user-friendly
+ 1. Run herder.
+    On first try, you will be prompted to create a config file -
+    save below template into `config.json` and fill in the blanks. For example,
+    fill Pinata account settings, and delete Pipin and Eternum configs:
 
-The result of this process is a short URL, that you can easily share with your friends & family, to give them access to selected photos.
-The use of the pinning service provides a way to keep the album browsable even when you close the computer from which you uploaded the photos.
+        $ go run ./cmd/herder
+        error: cannot read config.json: open config.json: no such file or directory
+        HINT: example config.json (not all entries are required!):
+        {
+          "Pinata": {
+            "Key": "",
+            "Secret": ""
+          },
+          "Pipin": {
+            "UseTLS": false,
+            "Host": "",
+            "Token": ""
+          },
+          "Eternum": {
+            "Key": ""
+          }
+        }
 
-Final note: Please have fun with it, hopefully at least as much as we had when creating it! :)
+ 2. Run herder again, after filling `config.json`:
 
+        $ go run ./cmd/herder
+        2020/11/23 09:34:04 Starting GUI server on: http://localhost:8081/guitest/
+
+    Your browser should now open and show the Catation Forever GUI.
+
+ 3. Optionally, if you have access to a Raspberry Pi or a VPS, and wish to use
+    them to store a copy of your photos, see `./cmd/pipin/`. The Pipin project
+    is a service you need to run on the server, and pass its secret token into
+    Herder's `config.json`.
