@@ -1,3 +1,22 @@
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
+**⚠️⚠️⚠️ IMPORTANT DISCLAIMER: ⚠️⚠️⚠️**
+Catation & Catation Forever are one-off experiments built over a hackathon at WPEngine,
+with explicitly **no official plans for maintenance or support from WPEngine**.
+The projects are released for free under GPLv3+ as an act of gratitude towards the FLOSS community.
+You are more than welcome to fork it & develop further on your own,
+as long as you adhere to the GPLv3+ license terms.
+The projects **are quick & dirty prototypes**,
+thus they may and does use various **horrible & amazing shortcuts**
+and are certainly **not ready for production-like use**. ⚠️⚠️⚠️
+
+It's however completely **OK to fork** this project,
+and forking is heartily welcome!
+For a list and status of any and all currently known forks,
+see: https://github.com/wpengine/hackathon-catation/network
+
+⚠️⚠️⚠️⚠️⚠️⚠️⚠️
+
 # Catation & Catation Forever - experiments in IPFS photo sharing
 
 **Catation** is an experimental app for easy sharing of photo albums with non-tech people, using IPFS.
@@ -12,19 +31,6 @@ It provides a way to easily replicate (copy) or move your photos between
 various IPFS pinning (i.e. data persistence) services.
 
 ![Herder GUI screenshot](images/herder.png)
-
-⚠️⚠️⚠️⚠️⚠️⚠️⚠️
-
-**⚠️⚠️⚠️ IMPORTANT NOTE: ⚠️⚠️⚠️** Catation & Catation Forever are one-off experiments built over a hackathon at WPEngine,
-with explicitly **no official plans for maintenance or support from WPEngine**.
-The projects are released for free under GPLv3+ as an act of gratitude towards the FLOSS community.
-You are more than welcome to fork it & develop further on your own,
-as long as you adhere to the GPLv3+ license terms.
-The projects **are quick & dirty prototypes**,
-thus they may and does use various **horrible & amazing shortcuts**
-and are certainly **not ready for production-like use**. ⚠️⚠️⚠️
-
-⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
 ## Running Catation
 
