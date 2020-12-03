@@ -10,8 +10,8 @@ The projects **are quick & dirty prototypes**,
 thus they may and does use various **horrible & amazing shortcuts**
 and are certainly **not ready for production-like use**. ⚠️⚠️⚠️
 
-For a list and status of any and all currently known forks,
-see: https://github.com/wpengine/hackathon-catation/network
+For a list and status of any and all currently known forks, see:  
+https://github.com/wpengine/hackathon-catation/network
 
 ⚠️⚠️⚠️⚠️⚠️⚠️⚠️
 
