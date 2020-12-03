@@ -1,5 +1,3 @@
-# ⚠️ **NOTE TO WPENGINE EMPLOYEES: THIS PROJECT IS NOT YET OFFICIALLY CONFIRMED FOR GPLv3 OPEN SOURCE RELEASE - ALL THE INFO ABOUT IT IS PRELIMINARY PENDING CONFIRMATION** ⚠️
-
 # Catation & Catation Forever - experiments in IPFS photo sharing
 
 **Catation** is an experimental app for easy sharing of photo albums with non-tech people, using IPFS.
